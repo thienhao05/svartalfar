@@ -84,6 +84,23 @@ toc: true
 ---
 ```
 
+### Publishing a new entry
+
+1. Create the file with `pnpm knowledge:new linux/my-note` (slugs are lowercase kebab-case without diacritics), or add a `.md` / `.mdx` file to `src/content/knowledge/` by hand.
+2. Fill in the front matter above. Set `draft: true` to keep it off the live site; drafts only show in `pnpm dev`.
+3. Write the body. A ` ```mermaid ` code block is drawn as a diagram.
+4. Preview with `pnpm dev`.
+5. Run `pnpm check`, `pnpm lint`, `pnpm test` and `pnpm build`. A mistake in the front matter fails the build.
+6. Commit and push to `main`. GitHub Actions builds and deploys the site.
+
+```bash
+git add src/content/knowledge/linux/my-note.md
+git commit -m "content: add my-note"
+git push
+```
+
+The entry then appears in Knowledge, the View map and search without any other change.
+
 ### Projects
 
 Create a file in `src/content/projects/`:
@@ -160,7 +177,7 @@ The repository carries rules and skills for [Claude Code](https://claude.com/cla
 ## Credits and licences
 
 - Layout inspiration: [astro-navfolio](https://github.com/dodolalorc/astro-navfolio) (MIT). This project is an independent implementation and does not depend on its packages.
-- Vendored design skills, all MIT: [hallmark](https://github.com/Nutlope/hallmark), [taste-skill](https://github.com/Leonxlnx/taste-skill), and four skills from [claudedesignskills](https://github.com/freshtechbro/claudedesignskills). Their licences are kept alongside them in `.claude/skills/`.
+- Vendored design skills, all MIT: [hallmark](https://github.com/Nutlope/hallmark), [taste-skill](https://github.com/Leonxlnx/taste-skill), and four skills from [claudedesignskills](https://github.com/freshtechbro/claudedesignskills). Their licences are kept alongside them in `.claude/skills/`
 
 ## Licence
 
