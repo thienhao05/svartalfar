@@ -1,0 +1,75 @@
+---
+import { site } from '../../config/site';
+import { withBase } from '../../utils/url';
+import Icon from '../Icon.astro';
+---
+
+<nav class="cards" aria-label="Elsewhere">
+  {site.navigation.map((item) => (
+    <a href={withBase(item.href)} class="card">
+      <span class="icon">
+        <Icon name={item.icon} size={20} />
+      </span>
+      <span class="text">
+        <strong>{item.title}</strong>
+        <small>{item.subtitle}</small>
+      </span>
+      <Icon name="external" size={16} />
+    </a>
+  ))}
+</nav>
+
+<style>
+  .cards {
+    display: grid;
+    gap: var(--space-2xs);
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-md);
+    min-height: 56px;
+    padding-block: var(--space-xs);
+    text-decoration: none;
+    transition: color var(--dur-short) var(--ease-out);
+  }
+
+  .card:hover {
+    color: var(--color-accent);
+  }
+
+  .card > :global(svg:last-child) {
+    transition: transform var(--dur-short) var(--ease-out);
+  }
+
+  .card:hover > :global(svg:last-child) {
+    transform: translate(2px, -2px);
+  }
+
+  .icon,
+  .card > :global(svg) {
+    color: var(--color-accent);
+  }
+
+  .text {
+    display: grid;
+    gap: var(--space-3xs);
+    min-width: 0;
+    text-align: left;
+  }
+
+  strong {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  small {
+    overflow: hidden;
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>

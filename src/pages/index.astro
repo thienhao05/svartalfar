@@ -1,0 +1,174 @@
+---
+import NavCards from '../components/cards/NavCards.astro';
+import ProfileCard from '../components/cards/ProfileCard.astro';
+import Icon from '../components/Icon.astro';
+import RecentList from '../components/knowledge/RecentList.astro';
+import RuneMark from '../components/RuneMark.astro';
+import Heatmap from '../components/widgets/Heatmap.astro';
+import { site } from '../config/site';
+import { getKnowledge } from '../data/knowledge';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { groupCounts } from '../utils/content';
+import { tagColour } from '../utils/tags';
+import { withBase } from '../utils/url';
+
+const all = await getKnowledge();
+const recent = all.slice(0, 5).map((e) => ({
+  text: e.data.title,
+  href: `/knowledge/${e.id}/`,
+  lang: e.data.lang,
+}));
+const topics = groupCounts(all, 'tags').slice(0, 10);
+const status = { now: 'Now', next: 'Next', paused: 'Paused' } as const;
+const journey = site.currentJourney.map((j) => ({
+  text: j.text,
+  mark: status[j.status],
+  accent: j.status === 'now',
+}));
+---
+
+<BaseLayout>
+  <div class="shell frame">
+    <div class="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title">
+          <RuneMark size="hero" intro />
+        </h1>
+        <blockquote class="slogan">
+          <span>{site.slogan}</span>
+        </blockquote>
+        <div class="copy">
+          {site.intro.map((p) => (
+            <p>{p}</p>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="recent-title">
+        <h2 class="block-title" id="recent-title">
+          <Icon name="calendar" size={18} /> Recently
+        </h2>
+        {recent.length > 0 ? (
+          <RecentList rows={recent} />
+        ) : (
+          <p class="empty">The first entry has not been written yet.</p>
+        )}
+      </section>
+
+      {journey.length > 0 && (
+        <section aria-labelledby="journey-title">
+          <h2 class="block-title" id="journey-title">
+            <Icon name="compass" size={18} /> Current journey
+          </h2>
+          <RecentList rows={journey} />
+        </section>
+      )}
+
+      {topics.length > 0 && (
+        <section aria-labelledby="topics-title">
+          <h2 class="block-title" id="topics-title">
+            <Icon name="layers" size={18} /> Featured topics
+          </h2>
+          <ul class="topics">
+            {topics.map((t) => (
+              <li>
+                <a
+                  class="chip hashtag"
+                  style={`--tag: var(--tag-${tagColour(t.name)})`}
+                  href={withBase(`/knowledge/tags/${t.slug}/`)}
+                >
+                  #{t.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+
+    <aside class="side" aria-label="About this archive">
+      <ProfileCard />
+      <Heatmap entries={all} />
+      <NavCards />
+    </aside>
+  </div>
+</BaseLayout>
+
+<style>
+  .main {
+    display: grid;
+    gap: var(--space-2xl);
+    align-content: start;
+  }
+
+  .hero {
+    display: grid;
+    gap: var(--space-lg);
+    max-width: 64ch;
+  }
+
+  h1 {
+    line-height: 1;
+  }
+
+  /* The rune glyph has side bearing; pull it back so its left edge lines up with the text below. */
+  h1 :global(.rune) {
+    margin-left: -0.07em;
+  }
+
+  .slogan {
+    margin: calc(var(--space-sm) * -1) 0 0;
+    padding-left: var(--space-md);
+    border-left: 2px solid var(--color-accent);
+    color: var(--color-ink-2);
+    font-size: var(--text-md);
+    font-style: italic;
+    line-height: var(--lh-snug);
+  }
+
+  .copy {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  .copy p {
+    color: var(--color-ink);
+    font-size: var(--text-md);
+    line-height: var(--lh-copy);
+  }
+
+  .block-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    font-weight: 600;
+  }
+
+  .block-title :global(svg) {
+    color: var(--color-accent);
+  }
+
+  .empty {
+    padding-block: var(--space-lg);
+    border-top: var(--rule-hair) solid var(--color-rule);
+    color: var(--color-muted);
+  }
+
+  .topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .side {
+    display: grid;
+    gap: var(--space-xl);
+    align-content: start;
+  }
+</style>

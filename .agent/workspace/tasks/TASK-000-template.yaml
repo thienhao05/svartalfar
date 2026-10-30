@@ -1,0 +1,18 @@
+id: TASK-000
+title: ""
+status: todo # todo | doing | review | done
+created: YYYY-MM-DD
+branch: feat/000-short-name
+goal: |
+  Một hai câu: người đọc / chủ blog được gì sau task này.
+scope:
+  - ""
+out_of_scope:
+  - ""
+acceptance:
+  # Mỗi dòng phải kiểm tra được (nhìn thấy trên trang, lệnh chạy xanh, ...)
+  - pnpm check && pnpm lint && pnpm build xanh
+  - ""
+files_expected:
+  - ""
+notes: ""

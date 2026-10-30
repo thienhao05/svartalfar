@@ -1,0 +1,328 @@
+---
+import { site } from '../config/site';
+import { isActivePath, withBase } from '../utils/url';
+import Icon from './Icon.astro';
+import RuneMark from './RuneMark.astro';
+
+const pathname = Astro.url.pathname;
+---
+
+<header class="site-header" data-pagefind-ignore>
+  <div class="shell">
+    <nav class="bar" aria-label="Main">
+      <a class="brand" href={withBase('/')} aria-label="Home">
+        <RuneMark />
+      </a>
+
+      <ul class="links">
+        <li class="indicator" aria-hidden="true" role="presentation"></li>
+        {site.nav.map((link) => (
+          <li>
+            <a
+              href={withBase(link.href)}
+              aria-current={isActivePath(pathname, link.href) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <div class="tools">
+        {site.author.github && (
+          <a class="tool" href={site.author.github} rel="me noreferrer" aria-label="GitHub">
+            <Icon name="github" />
+          </a>
+        )}
+        <button class="tool" type="button" data-mode-toggle aria-label="Switch to light mode">
+          <span class="when-dark">
+            <Icon name="sun" />
+          </span>
+          <span class="when-light">
+            <Icon name="moon" />
+          </span>
+        </button>
+        <button
+          class="tool"
+          type="button"
+          data-search-open
+          aria-haspopup="dialog"
+          aria-keyshortcuts="Control+K Meta+K"
+          aria-label="Search"
+          title="Search (Ctrl K)"
+        >
+          <Icon name="search" />
+        </button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<script>
+  import { nextNavState, type NavState } from '../utils/scroll';
+
+  const root = document.documentElement;
+
+  // Mode toggle.
+  const toggle = document.querySelector<HTMLButtonElement>('[data-mode-toggle]');
+  const sync = () =>
+    toggle?.setAttribute(
+      'aria-label',
+      root.dataset.mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode',
+    );
+  sync();
+  toggle?.addEventListener('click', () => {
+    const next = root.dataset.mode === 'light' ? 'dark' : 'light';
+    root.dataset.mode = next;
+    try {
+      localStorage.setItem('mode', next);
+    } catch {
+      /* storage blocked: the choice lasts for this page only */
+    }
+    sync();
+  });
+
+  // Hide the bar while reading down, bring it back on any upward scroll or near the top.
+  const header = document.querySelector<HTMLElement>('.site-header');
+  if (header) {
+    let state: NavState = { hidden: false, last: scrollY };
+    let ticking = false;
+    addEventListener(
+      'scroll',
+      () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          state = nextNavState(state, scrollY);
+          header.dataset.hidden = String(state.hidden);
+          ticking = false;
+        });
+      },
+      { passive: true },
+    );
+  }
+
+  // Sliding tab indicator: it starts where the previous page left it and glides to the active tab.
+  const links = document.querySelector<HTMLElement>('.site-header .links');
+  const indicator = links?.querySelector<HTMLElement>('.indicator');
+  const active = links?.querySelector<HTMLElement>('a[aria-current="page"]');
+  if (links && indicator && active) {
+    const KEY = 'nav-indicator';
+    const place = (box: { x: number; w: number }) => {
+      indicator.style.setProperty('--x', `${box.x}px`);
+      indicator.style.setProperty('--w', `${box.w}px`);
+    };
+    const target = { x: active.offsetLeft, w: active.offsetWidth };
+    let from: { x: number; w: number } | null = null;
+    try {
+      from = JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
+    } catch {
+      from = null;
+    }
+
+    links.dataset.indicator = 'on';
+    place(from ?? target);
+    // Commit the starting spot without a transition, then slide to the target.
+    void indicator.offsetWidth;
+    indicator.dataset.ready = 'true';
+    requestAnimationFrame(() => place(target));
+    try {
+      sessionStorage.setItem(KEY, JSON.stringify(target));
+    } catch {
+      /* storage blocked: no glide between pages, the indicator still shows */
+    }
+    addEventListener('resize', () => {
+      indicator.dataset.ready = 'false';
+      place({ x: active.offsetLeft, w: active.offsetWidth });
+      void indicator.offsetWidth;
+      indicator.dataset.ready = 'true';
+    });
+  }
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky-nav);
+    padding-top: var(--space-sm);
+    pointer-events: none;
+    transition:
+      transform 560ms var(--ease-in-out),
+      opacity 420ms var(--ease-in-out);
+  }
+
+  /* Reading down hides the bar; it stays while a control inside has focus. */
+  .site-header[data-hidden='true']:not(:focus-within) {
+    opacity: 0;
+    transform: translateY(calc(-100% - var(--space-sm)));
+  }
+
+  .bar {
+    pointer-events: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-md);
+    min-height: 56px;
+    padding: var(--space-2xs) var(--space-sm) var(--space-2xs) var(--space-md);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: color-mix(in oklab, var(--color-paper) 86%, transparent);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--color-ink) 6%, transparent);
+  }
+
+  .brand {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .links {
+    position: relative;
+    display: flex;
+    gap: var(--space-2xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .links a {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-inline: var(--space-md);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    transition: color var(--dur-short) var(--ease-out);
+  }
+
+  .links a:hover,
+  .links a[aria-current='page'] {
+    color: var(--color-ink);
+  }
+
+  /* Without JS the active tab carries its own pill; with JS the sliding indicator does. */
+  .links:not([data-indicator]) a[aria-current='page'] {
+    background: color-mix(in oklab, var(--color-accent) 14%, transparent);
+  }
+
+  /* No active tab (for example the 404 page): no indicator at all. */
+  .links:not([data-indicator]) .indicator {
+    display: none;
+  }
+
+  .indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--w, 0);
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--color-accent) 14%, transparent);
+    transform: translateX(var(--x, 0));
+    pointer-events: none;
+  }
+
+  .indicator::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    margin-left: -2px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
+  .indicator[data-ready='true'] {
+    transition:
+      transform 560ms var(--ease-in-out),
+      width 560ms var(--ease-in-out);
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    justify-self: end;
+    gap: var(--space-xs);
+  }
+
+  .tool {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-ink-2);
+    cursor: pointer;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out),
+      background-color var(--dur-short) var(--ease-out);
+  }
+
+  .tool:hover {
+    border-color: var(--color-rule-strong);
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
+  .tool:active {
+    transform: translateY(1px);
+  }
+
+  .when-light {
+    display: none;
+  }
+
+  :global([data-mode='light']) .when-light {
+    display: contents;
+  }
+
+  :global([data-mode='light']) .when-dark {
+    display: none;
+  }
+
+  @media (max-width: 48rem) {
+    .bar {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-2xs) var(--space-sm);
+      padding-bottom: var(--space-xs);
+    }
+
+    .links {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      /* `safe` keeps the first tab reachable if the row ever overflows. */
+      justify-content: safe center;
+      overflow-x: auto;
+    }
+
+    .links a {
+      padding-inline: var(--space-sm);
+    }
+
+    .tool {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-header,
+    .indicator[data-ready='true'] {
+      transition: none;
+    }
+  }
+</style>

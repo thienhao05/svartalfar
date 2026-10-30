@@ -1,0 +1,96 @@
+---
+/** Navfolio's "Recently" rows: a bullet, the title, and a two-digit index (or a note) on the right. */
+import { withBase } from '../../utils/url';
+
+interface Row {
+  text: string;
+  href?: string;
+  lang?: string;
+  /** Right-hand mark; defaults to the 1-based index. */
+  mark?: string;
+  accent?: boolean;
+}
+
+interface Props {
+  rows: Row[];
+}
+
+const { rows } = Astro.props;
+---
+
+<ul class="rows">
+  {rows.map((row, i) => (
+    <li>
+      {row.href ? (
+        <a href={withBase(row.href)} lang={row.lang}>
+          {row.text}
+        </a>
+      ) : (
+        <span>{row.text}</span>
+      )}
+      <strong class:list={{ accent: row.accent }} aria-hidden={row.mark ? undefined : 'true'}>
+        {row.mark ?? String(i + 1).padStart(2, '0')}
+      </strong>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .rows {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-md);
+    min-height: 48px;
+    padding: var(--space-sm) 0 var(--space-sm) var(--space-md);
+    border-top: var(--rule-hair) solid var(--color-rule);
+    font-size: var(--text-sm);
+  }
+
+  li::before {
+    transition: transform var(--dur-short) var(--ease-out);
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    margin-top: -2.5px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
+  a {
+    text-decoration: none;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      transform var(--dur-short) var(--ease-out);
+  }
+
+  a:hover {
+    color: var(--color-accent);
+    transform: translateX(3px);
+  }
+
+  li:hover::before {
+    transform: scale(1.8);
+  }
+
+  strong {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
+</style>

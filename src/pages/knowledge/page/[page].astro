@@ -1,0 +1,28 @@
+---
+import type { GetStaticPaths } from 'astro';
+import ArchivePage from '../../../components/knowledge/ArchivePage.astro';
+import { site } from '../../../config/site';
+import { getKnowledge } from '../../../data/knowledge';
+import { paginate } from '../../../utils/pagination';
+
+export const getStaticPaths = (async () => {
+  const all = await getKnowledge();
+  const { totalPages } = paginate(all, 1, site.knowledge.perPage);
+  // Page 1 lives at /knowledge/ itself.
+  return Array.from({ length: totalPages - 1 }, (_, i) => ({
+    params: { page: String(i + 2) },
+    props: paginate(all, i + 2, site.knowledge.perPage),
+  }));
+}) satisfies GetStaticPaths;
+
+const { items, page, totalPages, offset } = Astro.props;
+---
+
+<ArchivePage
+  title={`Knowledge, page ${page}`}
+  note="Older entries in the archive."
+  entries={items}
+  offset={offset}
+  page={page}
+  totalPages={totalPages}
+/>

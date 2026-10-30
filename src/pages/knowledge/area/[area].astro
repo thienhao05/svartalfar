@@ -1,0 +1,23 @@
+---
+import type { GetStaticPaths } from 'astro';
+import ArchivePage from '../../../components/knowledge/ArchivePage.astro';
+import { knowledgeAreas } from '../../../content.config';
+import { areaLabels, areaNotes, getKnowledge } from '../../../data/knowledge';
+
+export const getStaticPaths = (async () => {
+  const all = await getKnowledge();
+  return knowledgeAreas.map((area) => ({
+    params: { area },
+    props: { area, entries: all.filter((e) => e.data.area === area) },
+  }));
+}) satisfies GetStaticPaths;
+
+const { area, entries } = Astro.props;
+---
+
+<ArchivePage
+  title={areaLabels[area]}
+  note={areaNotes[area]}
+  entries={entries}
+  current={{ kind: 'area', slug: area }}
+/>

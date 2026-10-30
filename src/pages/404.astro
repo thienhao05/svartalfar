@@ -1,0 +1,31 @@
+---
+import RuneMark from '../components/RuneMark.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../utils/url';
+---
+
+<BaseLayout title="Not found">
+  <div class="shell lost">
+    <RuneMark size="hero" />
+    <h1>This page is not in the archive.</h1>
+    <p>It may have moved, or it was never written.</p>
+    <a class="button button-primary" href={withBase('/knowledge/')}>
+      Browse the archive
+    </a>
+  </div>
+</BaseLayout>
+
+<style>
+  .lost {
+    display: grid;
+    gap: var(--space-md);
+    justify-items: start;
+    padding-block: var(--space-3xl);
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    font-weight: 500;
+    max-width: 24ch;
+  }
+</style>

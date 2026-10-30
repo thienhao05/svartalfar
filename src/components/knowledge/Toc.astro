@@ -1,0 +1,99 @@
+---
+import type { TocItem } from '../../utils/toc';
+
+interface Props {
+  items: TocItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<nav class="toc" aria-labelledby="toc-title" data-toc>
+  <h2 id="toc-title">On this page</h2>
+  <ol>
+    {items.map((item) => (
+      <li>
+        <a href={`#${item.slug}`}>{item.text}</a>
+        {item.children.length > 0 && (
+          <ol>
+            {item.children.map((child) => (
+              <li>
+                <a href={`#${child.slug}`}>{child.text}</a>
+              </li>
+            ))}
+          </ol>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<script>
+  // Mark the heading currently being read; the list works as plain links without this.
+  const links = new Map(
+    [...document.querySelectorAll<HTMLAnchorElement>('[data-toc] a')].map((a) => [
+      decodeURIComponent(a.hash.slice(1)),
+      a,
+    ]),
+  );
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        links.forEach((a) => a.removeAttribute('aria-current'));
+        links.get(entry.target.id)?.setAttribute('aria-current', 'location');
+      }
+    },
+    { rootMargin: '-15% 0px -70% 0px' },
+  );
+  links.forEach((_, id) => {
+    const heading = document.getElementById(id);
+    if (heading) observer.observe(heading);
+  });
+</script>
+
+<style>
+  .toc {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  h2 {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-ink-2);
+  }
+
+  ol {
+    display: grid;
+    gap: var(--space-2xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  ol ol {
+    margin-top: var(--space-2xs);
+    padding-left: var(--space-md);
+  }
+
+  a {
+    display: block;
+    padding: var(--space-2xs) 0 var(--space-2xs) var(--space-sm);
+    border-left: 2px solid var(--color-rule);
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--color-ink);
+  }
+
+  a[aria-current] {
+    border-left-color: var(--color-accent);
+    color: var(--color-ink);
+  }
+</style>

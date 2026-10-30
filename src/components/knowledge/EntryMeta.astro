@@ -1,0 +1,161 @@
+---
+/**
+ * Entry facts as a quiet icon line, then chips. `full` (article header) adds the labelled
+ * Area / Category chips; lists show hashtags only. Each hashtag keeps its own colour.
+ */
+import type { CollectionEntry } from 'astro:content';
+import { slugify } from '../../utils/content';
+import { tagColour } from '../../utils/tags';
+import { withBase } from '../../utils/url';
+import { areaLabels } from '../../data/knowledge';
+import FormattedDate from '../FormattedDate.astro';
+import Icon from '../Icon.astro';
+
+interface Props {
+  entry: CollectionEntry<'knowledge'>;
+  /** Link area, categories and tags to their pages, and show the hashtags. */
+  links?: boolean;
+  /** Article header: add the Area / Category chips and the word count. */
+  full?: boolean;
+  words?: number;
+  readingMinutes?: number;
+}
+
+const { entry, links = true, full = false, words, readingMinutes } = Astro.props;
+const { date, updated, area, lang, categories, tags, series } = entry.data;
+const areaLabel = areaLabels[area];
+const nf = new Intl.NumberFormat('en-GB');
+---
+
+<div class="meta">
+  <ul class="facts">
+    <li>
+      <Icon name="calendar" size={14} />
+      <FormattedDate date={date} />
+    </li>
+    {updated && updated > date && (
+      <li>
+        <Icon name="pencil" size={14} />
+        <span>
+          Updated <FormattedDate date={updated} />
+        </span>
+      </li>
+    )}
+    {words !== undefined && (
+      <li>
+        <Icon name="text" size={14} />
+        {nf.format(words)} words
+      </li>
+    )}
+    {readingMinutes !== undefined && (
+      <li>
+        <Icon name="book" size={14} />
+        {readingMinutes} min read
+      </li>
+    )}
+    <li>{lang === 'vi' ? 'Tiếng Việt' : 'English'}</li>
+    {!links && <li>{areaLabel}</li>}
+  </ul>
+
+  {links && full && (
+    <ul class="chips" aria-label="Filed under">
+      <li>
+        <a class="chip filed" href={withBase(`/knowledge/area/${area}/`)}>
+          <Icon name="folder" size={14} />
+          <span class="label">Area</span>
+          <strong>{areaLabel}</strong>
+        </a>
+      </li>
+      {series && (
+        <li>
+          <a class="chip filed" href={withBase(`/knowledge/series/#${slugify(series)}`)}>
+            <Icon name="layers" size={14} />
+            <span class="label">Series</span>
+            <strong>{series}</strong>
+          </a>
+        </li>
+      )}
+      {categories.map((c) => (
+        <li>
+          <a class="chip filed" href={withBase(`/knowledge/categories/${slugify(c)}/`)}>
+            <Icon name="folder" size={14} />
+            <span class="label">Category</span>
+            <strong>{c}</strong>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {links && tags.length > 0 && (
+    <ul class="chips" aria-label="Tags">
+      {tags.map((t) => (
+        <li>
+          <a
+            class="chip hashtag"
+            style={`--tag: var(--tag-${tagColour(t)})`}
+            href={withBase(`/knowledge/tags/${slugify(t)}/`)}
+          >
+            #{t}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
+<style>
+  .meta {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .facts {
+    gap: var(--space-3xs) var(--space-md);
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .facts li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .chips {
+    gap: var(--space-2xs) var(--space-xs);
+  }
+
+  .chip {
+    min-height: 26px;
+    padding: 0 var(--space-sm);
+    font-size: 0.75rem;
+  }
+
+  .hashtag {
+    min-height: 22px;
+    padding: 0 var(--space-xs);
+  }
+
+  .filed {
+    gap: var(--space-xs);
+    color: var(--color-ink-2);
+  }
+
+  .filed .label {
+    color: var(--color-muted);
+  }
+
+  .filed strong {
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+</style>

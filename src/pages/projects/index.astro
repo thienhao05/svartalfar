@@ -1,0 +1,154 @@
+---
+import Icon from '../../components/Icon.astro';
+import ProjectCard from '../../components/projects/ProjectCard.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import { getProjects } from '../../data/projects';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const projects = await getProjects();
+const lastTouched = projects
+  .map((p) => p.data.updated ?? p.data.date)
+  .sort((a, b) => b.valueOf() - a.valueOf())[0];
+---
+
+<BaseLayout
+  title="Projects"
+  description="Personal projects, experiments and the decisions behind them."
+>
+  <div class="shell page">
+    <header class="head">
+      <div class="title">
+        <h1>Projects</h1>
+        <ul class="facts">
+          {lastTouched && (
+            <li>
+              <Icon name="pencil" size={14} />
+              <FormattedDate date={lastTouched} />
+            </li>
+          )}
+          <li>
+            <Icon name="layers" size={14} />
+            {`${projects.length} ${projects.length === 1 ? 'project' : 'projects'}`}
+          </li>
+        </ul>
+      </div>
+      <div class="aside">
+        <p class="sub">Things I build, break and keep notes on.</p>
+        <p class="note">A compact shelf of projects, experiments and the decisions behind them.</p>
+      </div>
+    </header>
+
+    <div class="intro">
+      <p>
+        This section collects work that is in progress, shipped, or simply worth remembering: what
+        each project is for, the problem it solves, what it can do today and where it goes next.
+      </p>
+      <p>
+        Entries are kept short on purpose. The shelf is for quick browsing; each project page holds
+        the background, structure and the trade-offs behind it.
+      </p>
+    </div>
+
+    {projects.length > 0 ? (
+      <div class="grid">
+        {projects.map((p) => (
+          <ProjectCard project={p} />
+        ))}
+      </div>
+    ) : (
+      <p class="empty">No project has been shelved yet.</p>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    padding-block: var(--space-xl);
+  }
+
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    letter-spacing: var(--tracking-display);
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3xs) var(--space-md);
+    margin: var(--space-sm) 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .facts li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .aside {
+    display: grid;
+    gap: var(--space-xs);
+    padding-top: var(--space-xs);
+    text-align: right;
+  }
+
+  .sub {
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    line-height: var(--lh-copy);
+  }
+
+  .note {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+    line-height: var(--lh-copy);
+  }
+
+  .intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 78ch;
+    margin-block: var(--space-xl);
+  }
+
+  .intro p {
+    font-size: var(--text-sm);
+    line-height: var(--lh-copy);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
+  }
+
+  .empty {
+    padding-block: var(--space-xl);
+    border-top: var(--rule-hair) solid var(--color-rule);
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 48rem) {
+    .head {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .aside {
+      text-align: left;
+    }
+
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

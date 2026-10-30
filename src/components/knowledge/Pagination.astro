@@ -1,0 +1,109 @@
+---
+import { pageHref, pageWindow } from '../../utils/pagination';
+import { withBase } from '../../utils/url';
+import Icon from '../Icon.astro';
+
+interface Props {
+  page: number;
+  totalPages: number;
+}
+
+const { page, totalPages } = Astro.props;
+const items = pageWindow(page, totalPages);
+---
+
+{totalPages > 1 && (
+  <nav class="pagination" aria-label="Pages">
+    {page > 1 ? (
+      <a class="pg step" href={withBase(pageHref(page - 1))} rel="prev" aria-label="Newer entries">
+        <Icon name="arrow-left" size={14} />
+      </a>
+    ) : (
+      <span class="pg step off" aria-hidden="true">
+        <Icon name="arrow-left" size={14} />
+      </span>
+    )}
+
+    {items.map((item) =>
+      item === 'gap' ? (
+        <span class="gap" aria-hidden="true">
+          …
+        </span>
+      ) : (
+        <a
+          class="pg"
+          href={withBase(pageHref(item))}
+          aria-current={item === page ? 'page' : undefined}
+          aria-label={`Page ${item}`}
+        >
+          {item}
+        </a>
+      ),
+    )}
+
+    {page < totalPages ? (
+      <a class="pg step" href={withBase(pageHref(page + 1))} rel="next" aria-label="Older entries">
+        <Icon name="arrow-right" size={14} />
+      </a>
+    ) : (
+      <span class="pg step off" aria-hidden="true">
+        <Icon name="arrow-right" size={14} />
+      </span>
+    )}
+  </nav>
+)}
+
+<style>
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2xs);
+    margin-top: var(--space-xl);
+  }
+
+  .pg {
+    display: inline-grid;
+    place-items: center;
+    min-width: 34px;
+    height: 34px;
+    padding-inline: var(--space-xs);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out),
+      background-color var(--dur-short) var(--ease-out),
+      transform var(--dur-short) var(--ease-out);
+  }
+
+  a.pg:hover {
+    border-color: var(--color-accent);
+    background: color-mix(in oklab, var(--color-accent) 10%, transparent);
+    color: var(--color-ink);
+    transform: translateY(-1px);
+  }
+
+  .pg[aria-current='page'] {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-weight: 700;
+  }
+
+  .off {
+    opacity: 0.35;
+  }
+
+  .gap {
+    min-width: 20px;
+    color: var(--color-muted);
+    text-align: center;
+  }
+</style>

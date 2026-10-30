@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+.env
+.env.*
+
+# Thư mục làm việc của skill thiết kế
+.taste-skill/
+.hallmark/
+.pnpm-store/

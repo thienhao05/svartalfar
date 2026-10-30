@@ -1,0 +1,143 @@
+/* Design tokens: the only place a colour, a face, a size or a duration is written.
+ * Dark is the default rendering (the archive is underground); light is a derived second rendering.
+ * Accent hue stays in the gold family in both modes; the ground shifts from indigo (dark) to yellowed paper (light). */
+:root {
+  color-scheme: dark;
+
+  /* Spacing scale (hallmark craft § 3) */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+  --space-4xl: 144px;
+
+  /* Type scale: 16px body, ~1.25 ratio */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-prose: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5625rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  --text-display: clamp(1.75rem, 2vw + 1rem, 2.5rem);
+  --text-rune: clamp(2.75rem, 6vw + 1rem, 5.5rem);
+  --tracking-display: -0.01em;
+  /* Vietnamese stacks two marks on one letter; headings need room or the marks touch the line above */
+  --lh-heading: 1.3;
+  --lh-prose: 1.85;
+  /* Short copy (intros, excerpts, ledes): less open than article prose, more than a title */
+  --lh-snug: 1.4;
+  --lh-copy: 1.65;
+
+  /* Faces: Maple Mono for all text (the navfolio look; every Vietnamese letter is in the font,
+   * OFL); Noto Sans Runic for the rune inscription only. */
+  --font-display: 'Maple Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-body: var(--font-display);
+  --font-mono: var(--font-display);
+  --font-rune: 'Noto Sans Runic', var(--font-display);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  /* Layout (navfolio dashboard proportions) */
+  --container: 1180px;
+  --gutter: 40px;
+  --col-main: 760px;
+  --col-side: 284px;
+  --gap-columns: 48px;
+  --measure: 72ch;
+  --nav-height: 60px;
+
+  --radius-sm: 6px;
+  --radius-card: 10px;
+  --radius-pill: 999px;
+  --rule-hair: 1px;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-sticky-nav: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* Colour: dark (default). Deep indigo stone, parchment ink, antique-gold signal. */
+  --color-paper: oklch(17% 0.03 275);
+  --color-paper-2: oklch(20.5% 0.035 275);
+  --color-paper-3: oklch(25% 0.04 275);
+  --color-ink: oklch(94% 0.02 85);
+  --color-ink-2: oklch(82% 0.025 280);
+  --color-muted: oklch(70% 0.035 280);
+  --color-rule: oklch(30% 0.04 275);
+  --color-rule-strong: oklch(41% 0.05 275);
+  --color-accent: oklch(80% 0.1 80);
+  --color-accent-ink: oklch(20% 0.04 80);
+  --color-focus: oklch(85% 0.115 80);
+  --color-rune: oklch(84% 0.09 80);
+  --heat-0: oklch(24% 0.04 275);
+  --heat-1: oklch(40% 0.055 80);
+  --heat-2: oklch(54% 0.075 80);
+  --heat-3: oklch(68% 0.09 80);
+  --heat-4: oklch(80% 0.1 80);
+
+  /* Hashtag colours: six hues, one lightness, assigned per tag by tagColour() */
+  --tag-0: oklch(80% 0.1 80);
+  --tag-1: oklch(80% 0.1 155);
+  --tag-2: oklch(80% 0.09 215);
+  --tag-3: oklch(78% 0.1 255);
+  --tag-4: oklch(80% 0.1 335);
+  --tag-5: oklch(80% 0.11 35);
+}
+
+/* Light: neutral paper with only a faint warm cast, brown ink, deep gold signal. */
+:root[data-mode='light'] {
+  color-scheme: light;
+  --color-paper: oklch(96.5% 0.012 90);
+  --color-paper-2: oklch(93.5% 0.014 90);
+  --color-paper-3: oklch(90.5% 0.016 88);
+  --color-ink: oklch(23% 0.02 70);
+  --color-ink-2: oklch(37% 0.02 70);
+  --color-muted: oklch(47% 0.022 70);
+  --color-rule: oklch(86% 0.014 88);
+  --color-rule-strong: oklch(75% 0.02 85);
+  --color-accent: oklch(48% 0.095 75);
+  --color-accent-ink: oklch(97% 0.015 90);
+  --color-focus: oklch(50% 0.13 75);
+  --color-rune: oklch(42% 0.085 75);
+  --heat-0: oklch(90.5% 0.016 88);
+  --heat-1: oklch(85% 0.04 85);
+  --heat-2: oklch(74% 0.075 80);
+  --heat-3: oklch(60% 0.095 76);
+  --heat-4: oklch(47% 0.095 72);
+  --tag-0: oklch(46% 0.1 75);
+  --tag-1: oklch(44% 0.1 155);
+  --tag-2: oklch(44% 0.09 215);
+  --tag-3: oklch(46% 0.12 262);
+  --tag-4: oklch(46% 0.12 335);
+  --tag-5: oklch(46% 0.12 35);
+}
+
+@media (max-width: 60rem) {
+  :root {
+    --gutter: 24px;
+    --gap-columns: 32px;
+  }
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --gutter: 16px;
+  }
+}

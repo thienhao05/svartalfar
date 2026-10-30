@@ -1,0 +1,65 @@
+---
+/** Series, Tags and Years: the other ways to browse the archive; the current one is underlined. */
+import { withBase } from '../../utils/url';
+import Icon from '../Icon.astro';
+
+interface Props {
+  current?: 'series' | 'tags' | 'years' | undefined;
+}
+
+const { current } = Astro.props;
+const views = [
+  { id: 'series', label: 'Series', icon: 'layers', href: '/knowledge/series/' },
+  { id: 'tags', label: 'Tags', icon: 'tag', href: '/knowledge/tags/' },
+  { id: 'years', label: 'Years', icon: 'calendar', href: '/knowledge/years/' },
+] as const;
+---
+
+<nav class="views" aria-label="Browse by">
+  {views.map((v) => (
+    <a href={withBase(v.href)} aria-current={current === v.id ? 'page' : undefined}>
+      <Icon name={v.icon} size={14} />
+      {v.label}
+    </a>
+  ))}
+</nav>
+
+<style>
+  .views {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    /* No divider: the space on the right is what separates the views from the area filters. */
+    margin-right: var(--space-xl);
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 28px;
+    border-bottom: 2px solid transparent;
+    color: var(--color-ink-2);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out);
+  }
+
+  a:hover {
+    color: var(--color-accent);
+  }
+
+  a[aria-current='page'] {
+    border-bottom-color: var(--color-accent);
+    color: var(--color-ink);
+  }
+
+  @media (max-width: 40rem) {
+    .views {
+      margin-right: 0;
+    }
+  }
+</style>

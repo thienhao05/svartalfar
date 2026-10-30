@@ -1,0 +1,15 @@
+---
+import ArchivePage from '../../components/knowledge/ArchivePage.astro';
+import { site } from '../../config/site';
+import { getKnowledge } from '../../data/knowledge';
+import { paginate } from '../../utils/pagination';
+
+const { items, totalPages } = paginate(await getKnowledge(), 1, site.knowledge.perPage);
+---
+
+<ArchivePage
+  title="Knowledge"
+  note="Everything kept so far: concepts, work lessons, experiments and reflections, newest first."
+  entries={items}
+  totalPages={totalPages}
+/>

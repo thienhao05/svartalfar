@@ -1,0 +1,338 @@
+/* Hallmark · shape: navfolio dashboard (main column + right rail), numbered archive, article with toc rail · genre: editorial · theme: custom · job: read · idea: "a hidden archive whose name is carved in runes; every entry is a page kept for later" · vibe: "underground library, cold stone, aged bronze"
+ * paper: oklch(17% 0.014 255) · accent: oklch(78% 0.1 62) · display: Maple Mono · body: Maple Mono · hero: the rune inscription set large over the slogan, the archive's first entries beside it · nav: sticky bar, wordmark left, sections, search and mode right · footer: slogan in both languages under a hairline · imagery: none, type and the runes carry it · signature: the rune inscription (from site.rune)
+ * axes: dark/mono/warm · posture: restrained · contrast: pass · fold: pass · modes: dark+light · v2.0.0 */
+/* Hallmark · pre-emit critique: P2 H2 E2 S2 R1 V2 · weakest: R (no pictures), the runes and real entries carry every screen instead of stand-ins */
+@import 'tailwindcss';
+@import '@fontsource/maple-mono/400.css';
+@import '@fontsource/maple-mono/400-italic.css';
+@import '@fontsource/maple-mono/500.css';
+@import '@fontsource/maple-mono/600.css';
+@import '@fontsource/maple-mono/700.css';
+@import '@fontsource/noto-sans-runic/400.css';
+@import './tokens.css';
+@import './base.css';
+@import './prose.css';
+
+@theme inline {
+  --color-paper: var(--color-paper);
+  --color-paper-2: var(--color-paper-2);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 500;
+  line-height: var(--lh-heading);
+}
+
+html {
+  scroll-padding-top: calc(var(--nav-height) + var(--space-lg));
+  font-synthesis: none;
+  /* Maple Mono's cv02: the familiar two-storey a, the same on a, á, ạ, ả, ậ... */
+  font-feature-settings: 'cv02';
+}
+
+/* Smooth anchor and in-page scrolling (table of contents, skip link), unless motion is reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+code,
+pre,
+.expressive-code {
+  font-feature-settings: 'cv02';
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+a {
+  transition: color var(--dur-short) var(--ease-out);
+}
+
+a:hover {
+  color: var(--color-accent);
+}
+
+.shell {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Two-column page frame shared by the dashboard, archive and article (navfolio proportions). */
+.frame {
+  display: grid;
+  grid-template-columns: minmax(0, var(--col-main)) minmax(0, var(--col-side));
+  justify-content: space-between;
+  gap: var(--gap-columns);
+  align-items: start;
+  padding-block: var(--space-2xl) var(--space-3xl);
+}
+
+.frame > * {
+  min-width: 0;
+}
+
+@media (max-width: 60rem) {
+  .frame {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: var(--space-xl) var(--space-2xl);
+  }
+}
+
+/* Rail sections: hairline above, a small heading, then content. */
+.rail {
+  display: grid;
+  gap: var(--space-xl);
+  align-content: start;
+}
+
+.rail-block {
+  display: grid;
+  gap: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: var(--rule-hair) solid var(--color-rule);
+}
+
+.rail-block > h2 {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-2);
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.section-head h2 {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+
+.section-head a {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 28px;
+  padding: 0 var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  transition:
+    color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    transform var(--dur-short) var(--ease-out);
+}
+
+.chip:hover {
+  border-color: var(--color-accent);
+  background: color-mix(in oklab, var(--color-accent) 8%, transparent);
+  color: var(--color-ink);
+  transform: translateY(-1px);
+}
+
+.chip:active {
+  transform: translateY(0);
+}
+
+/* The selected filter is filled, so the current view is never in doubt. */
+.chip[aria-current='page'] {
+  border-color: var(--color-accent);
+  background: color-mix(in oklab, var(--color-accent) 16%, transparent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* Entry count as a small badge. */
+.chip .count {
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--color-ink) 10%, transparent);
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip[aria-current='page'] .count {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+/* Hashtags: each carries its own hue through --tag (set from the name by tagColour). */
+.chip.hashtag {
+  min-height: 22px;
+  padding: 0 var(--space-xs);
+  font-size: 0.75rem;
+  border-color: color-mix(in oklab, var(--tag) 42%, transparent);
+  background: color-mix(in oklab, var(--tag) 13%, transparent);
+  color: var(--tag);
+  font-weight: 600;
+}
+
+.chip.hashtag:hover {
+  border-color: var(--tag);
+  background: color-mix(in oklab, var(--tag) 24%, transparent);
+  color: var(--tag);
+}
+
+/* Sidebar filters: the same chips, one step smaller, so long tag lists stay compact. */
+.rail-block .chips {
+  gap: var(--space-2xs);
+}
+
+.rail-block .chip {
+  min-height: 22px;
+  padding: 0 var(--space-xs);
+  gap: var(--space-2xs);
+  font-size: 0.75rem;
+}
+
+.rail-block .chip .count {
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  font-size: 0.625rem;
+  line-height: 1.4;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-lg);
+  border: var(--rule-hair) solid transparent;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-short) var(--ease-out),
+    color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out);
+}
+
+.button-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.button-primary:hover {
+  background: var(--color-focus);
+  color: var(--color-accent-ink);
+}
+
+.button-primary:active {
+  transform: translateY(1px);
+}
+
+.button-quiet {
+  border-color: var(--color-rule-strong);
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.button-quiet:hover {
+  border-color: var(--color-ink-2);
+  color: var(--color-ink);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scroll reveal: JS marks only blocks that start below the fold, so no-JS and above-the-fold stay visible. */
+/* Hidden only under .js (set by the head script), so the page is fully visible without scripting. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 520ms var(--ease-out),
+    transform 520ms var(--ease-out);
+}
+
+.js [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Smooth page changes: a short cross-fade; the header stays put so its tab indicator can glide. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 240ms;
+    animation-timing-function: var(--ease-out);
+  }
+
+  .site-header {
+    view-transition-name: site-header;
+  }
+
+  ::view-transition-group(site-header) {
+    animation: none;
+  }
+
+  ::view-transition-old(site-header) {
+    display: none;
+  }
+
+  ::view-transition-new(site-header) {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

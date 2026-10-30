@@ -1,0 +1,305 @@
+---
+import ViewPage from '../../../components/knowledge/ViewPage.astro';
+import { getKnowledge } from '../../../data/knowledge';
+import { cloudWeight, groupCounts } from '../../../utils/content';
+import { tagColour } from '../../../utils/tags';
+import { withBase } from '../../../utils/url';
+
+const tags = groupCounts(await getKnowledge(), 'tags'); // most used first
+const counts = tags.map((t) => t.count);
+const min = Math.min(...counts);
+const max = Math.max(...counts);
+
+/**
+ * Orbit layout for wide screens: the most used tag sits in the middle, the next few run on an
+ * inner ring and the rest on an outer ring. Each tag gets a fixed angle on its ring; the rings
+ * turn in opposite directions. Narrow screens fall back to a plain wrapping cloud.
+ */
+const INNER = 8;
+const place = new Map<string, { ring: 'core' | 'inner' | 'outer'; theta: number }>();
+const inner = tags.slice(1, 1 + INNER);
+const outer = tags.slice(1 + INNER);
+const core = tags[0];
+if (core) place.set(core.name, { ring: 'core', theta: 0 });
+inner.forEach((t, i) => place.set(t.name, { ring: 'inner', theta: (i / inner.length) * 360 + 22 }));
+outer.forEach((t, i) => place.set(t.name, { ring: 'outer', theta: (i / outer.length) * 360 }));
+
+// The DOM stays alphabetical so the fallback reads easily and screen readers get a sorted list.
+const cloud = [...tags].sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<ViewPage
+  view="tags"
+  title="Tags"
+  note="Every topic that appears in the archive, larger when it is used more."
+>
+  {cloud.length > 0 ? (
+    <div class="orbit">
+      <div class="stage">
+        <ul class="cloud">
+          {cloud.map((t, i) => {
+            const p = place.get(t.name);
+            return (
+              <li data-ring={p?.ring} style={`--i: ${i}; --theta: ${p?.theta ?? 0}deg`}>
+                <a
+                  class="chip hashtag"
+                  href={withBase(`/knowledge/tags/${t.slug}/`)}
+                  style={`--w: ${cloudWeight(t.count, min, max).toFixed(3)}; --tag: var(--tag-${tagColour(t.name)})`}
+                >
+                  #{t.name}
+                  <span class="n">{t.count}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  ) : (
+    <p class="empty">No tags yet.</p>
+  )}
+</ViewPage>
+
+<script>
+  import { easeToward, orbitPoint } from '../../../utils/orbit';
+
+  // The orbit is driven here, not by a CSS animation: positions are written as translate3d on
+  // each frame from a clock, and the speed eases to a stop on hover and back up again, so the
+  // motion never starts or stops abruptly. Without JS the tags simply sit on their rings.
+  const stage = document.querySelector<HTMLElement>('.stage');
+  const cloud = stage?.querySelector<HTMLElement>('.cloud');
+
+  if (stage && cloud) {
+    const WIDE = 720; // keep in step with the @container query in the styles
+    const OUTER_TURN = (Math.PI * 2) / 110; // radians per second
+    const INNER_TURN = -(Math.PI * 2) / 80;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+    const items = [
+      ...cloud.querySelectorAll<HTMLElement>('li[data-ring="outer"], li[data-ring="inner"]'),
+    ].map((li) => ({
+      li,
+      outer: li.dataset.ring === 'outer',
+      theta: (parseFloat(li.style.getPropertyValue('--theta')) * Math.PI) / 180,
+    }));
+
+    let rxOuter = 0;
+    let rxInner = 0;
+    let ryOuter = 0;
+    let ryInner = 0;
+    let wide = false;
+    let turnOuter = 0;
+    let turnInner = 0;
+    let speed = 1;
+    let target = 1;
+    let visible = true;
+    let raf = 0;
+    let last = 0;
+
+    const measure = () => {
+      const w = stage.clientWidth;
+      wide = w >= WIDE;
+      rxOuter = w * 0.41;
+      rxInner = w * 0.21;
+      const css = getComputedStyle(stage);
+      ryOuter = parseFloat(css.getPropertyValue('--ry-outer')) || 150;
+      ryInner = parseFloat(css.getPropertyValue('--ry-inner')) || 78;
+    };
+
+    const place = () => {
+      for (const it of items) {
+        if (!wide) {
+          it.li.style.transform = '';
+          continue;
+        }
+        const { x, y } = orbitPoint(
+          it.theta,
+          it.outer ? turnOuter : turnInner,
+          it.outer ? rxOuter : rxInner,
+          it.outer ? ryOuter : ryInner,
+        );
+        it.li.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)`;
+      }
+    };
+
+    const frame = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      // Ease the speed toward its target so hovering slows the rings down instead of freezing them.
+      speed = easeToward(speed, target, dt);
+      turnOuter += dt * speed * OUTER_TURN;
+      turnInner += dt * speed * INNER_TURN;
+      place();
+      raf = requestAnimationFrame(frame);
+    };
+
+    const sync = () => {
+      const run = wide && visible && !reduced.matches && !document.hidden;
+      if (run && !raf) {
+        last = performance.now();
+        raf = requestAnimationFrame(frame);
+      } else if (!run && raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    const refresh = () => {
+      measure();
+      place();
+      sync();
+    };
+
+    new ResizeObserver(refresh).observe(stage);
+    new IntersectionObserver(([entry]) => {
+      visible = Boolean(entry?.isIntersecting);
+      sync();
+    }).observe(stage);
+    reduced.addEventListener('change', sync);
+    document.addEventListener('visibilitychange', sync);
+
+    // Slow down while the pointer or keyboard focus is on a tag, so it is easy to hit.
+    stage.addEventListener('pointerenter', () => (target = 0));
+    stage.addEventListener('pointerleave', () => (target = 1));
+    stage.addEventListener('focusin', () => (target = 0));
+    stage.addEventListener('focusout', () => (target = 1));
+
+    refresh();
+  }
+</script>
+
+<style>
+  /* A container's own styles are not changed by its container queries, so the query container
+     is this wrapper and everything that depends on width lives inside it. */
+  .orbit {
+    container-type: inline-size;
+  }
+
+  .stage {
+    position: relative;
+    padding: var(--space-xl) var(--space-lg);
+  }
+
+  /* Narrow screens: a plain wrapping cloud, no orbit. */
+  .cloud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm) var(--space-md);
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The same chip as everywhere else; only its size follows how often the tag is used. */
+  .cloud li a.chip {
+    min-height: 0;
+    padding: 0.2em 0.7em;
+    font-size: calc(0.75rem + var(--w) * 0.95rem);
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+
+  .cloud li a.chip:hover {
+    transform: translateY(-2px);
+  }
+
+  .n {
+    margin-left: 0.35em;
+    padding: 0 0.4em;
+    border-radius: var(--radius-pill);
+    background: color-mix(in oklab, var(--tag) 22%, transparent);
+    font-size: 0.7em;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  /* Wide screens: the orbit. */
+  @container (min-width: 720px) {
+    .stage {
+      --ry-outer: 150px;
+      --ry-inner: 78px;
+      height: 440px;
+      padding: 0;
+    }
+
+    .stage::before,
+    .stage::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      translate: -50% -50%;
+      border: var(--rule-hair) solid var(--color-rule);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .stage::before {
+      width: 82%;
+      height: calc(var(--ry-outer) * 2);
+    }
+
+    .stage::after {
+      width: 42%;
+      height: calc(var(--ry-inner) * 2);
+    }
+
+    .cloud {
+      /* cqw counts against the .stage container, so these live on a descendant of it. */
+      --rx-outer: 41cqw;
+      --rx-inner: 21cqw;
+      --turn-outer: 0deg;
+      --turn-inner: 0deg;
+      display: block;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+    }
+
+    .cloud li {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      translate: -50% -50%;
+    }
+
+    .cloud li[data-ring='outer'] {
+      --ang: calc(var(--theta) + var(--turn-outer));
+      transform: translate(
+        calc(cos(var(--ang)) * var(--rx-outer)),
+        calc(sin(var(--ang)) * var(--ry-outer))
+      );
+    }
+
+    .cloud li[data-ring='inner'] {
+      --ang: calc(var(--theta) + var(--turn-inner));
+      transform: translate(
+        calc(cos(var(--ang)) * var(--rx-inner)),
+        calc(sin(var(--ang)) * var(--ry-inner))
+      );
+    }
+  }
+
+  /* Motion: tags fade in one after another, then the rings turn, slowly and in opposite ways. */
+  @media (prefers-reduced-motion: no-preference) {
+    .cloud li {
+      animation: arrive 600ms var(--ease-out) calc(var(--i) * 30ms) backwards;
+    }
+  }
+
+  @keyframes arrive {
+    from {
+      opacity: 0;
+      scale: 0.9;
+    }
+  }
+
+  .empty {
+    padding-block: var(--space-xl);
+    color: var(--color-muted);
+  }
+</style>

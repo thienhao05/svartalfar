@@ -1,0 +1,29 @@
+id: TASK-006
+title: Navfolio-style dashboard, floating nav, search modal, article meta
+status: review
+created: 2026-10-30
+branch: feat/006-navfolio-look
+goal: |
+  Home, header, search and article header match the navfolio references the owner supplied,
+  in SVARTALFAR's palette, fonts and rune logo.
+scope:
+  - Floating bordered header with icon buttons and a sliding active indicator between tabs
+  - Search dialog with title bar, close button, bordered input and hint line
+  - Home dashboard: rune heading, italic slogan, intro, Recently list, profile column with stats, latest, heatmap, nav cards, social icons
+  - Article header meta with icons, area/category chips and multi-colour hashtags
+  - Remove the "The keeper" label
+out_of_scope:
+  - Learning Paths, Projects, Journal, About
+acceptance:
+  - pnpm check, lint, test, build green; sloplint 0 FAIL / 0 REFLEX
+  - Header, search, home and article checked at 375 and 1280px in dark and light
+  - Hashtag colour is deterministic per tag and passes contrast in both modes
+  - Indicator animation is off under prefers-reduced-motion and the page works without JS
+files_expected:
+  - src/components/Header.astro
+  - src/components/Search.astro
+  - src/pages/index.astro
+  - src/components/knowledge/EntryMeta.astro
+  - src/config/site.ts
+  - src/styles/tokens.css
+notes: ""

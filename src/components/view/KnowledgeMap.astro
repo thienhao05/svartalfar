@@ -1,0 +1,1260 @@
+---
+/**
+ * The knowledge map. The diagram is rendered on the server, so without JavaScript it is a static
+ * picture inside a scrollable frame; the script adds pan, zoom, highlight, minimap and keys.
+ */
+import { areaLabels } from '../../data/knowledge';
+import { buildGraph, type GraphInput } from '../../utils/graph';
+import { tagColour } from '../../utils/tags';
+import Icon from '../Icon.astro';
+
+interface Props {
+  inputs: GraphInput[];
+}
+
+const { inputs } = Astro.props;
+const graph = buildGraph(inputs);
+const edges = graph.edges;
+const day = (d: Date) => d.toISOString().slice(0, 10);
+
+// What the script needs, kept small: positions for the minimap, text for the panel, links for highlight.
+const data = {
+  width: graph.width,
+  height: graph.height,
+  nodes: graph.nodes.map((n) => ({
+    id: n.nodeId,
+    x: n.x,
+    y: n.y,
+    w: n.w,
+    h: n.h,
+    title: n.title,
+    description: n.description,
+    url: n.url,
+    label: n.label,
+    kind: n.kind,
+    tags: n.tags ?? [],
+    date: day(n.date),
+    step: n.step ?? null,
+  })),
+  edges: edges.map((e) => ({ from: e.from, to: e.to })),
+};
+void areaLabels;
+---
+
+<section class="map" data-map aria-label="Knowledge map">
+  <div
+    class="viewport"
+    tabindex="0"
+    role="region"
+    aria-label="Map canvas. Drag to move, scroll to zoom, arrow keys to pan, question mark for all keys."
+  >
+    <div class="world" style={`width: ${graph.width}px; height: ${graph.height}px`}>
+      <svg
+        class="edges"
+        width={graph.width}
+        height={graph.height}
+        viewBox={`0 0 ${graph.width} ${graph.height}`}
+        aria-hidden="true"
+      >
+        <defs>
+          <marker
+            id="arrow"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head" />
+          </marker>
+        </defs>
+        {edges.map((e, i) => (
+          <path
+            class={`edge ${e.kind}`}
+            d={e.d}
+            data-from={e.from}
+            data-to={e.to}
+            pathLength={e.kind === 'feeds' ? '1' : undefined}
+            marker-end={e.kind === 'feeds' ? 'url(#arrow)' : undefined}
+            style={`--i: ${i}`}
+          />
+        ))}
+      </svg>
+
+      {graph.groups.map((g, gi) => (
+        <div
+          class="group"
+          style={`left: ${g.x}px; top: ${g.y}px; width: ${g.w}px; height: ${g.h}px; --g: ${gi}`}
+        >
+          <span class="group-label">
+            {g.label}
+            <small>{g.count}</small>
+          </span>
+        </div>
+      ))}
+
+      {graph.nodes.map((n, i) => (
+        <a
+          class:list={['node', n.kind, { series: n.step }]}
+          href={n.url}
+          data-id={n.nodeId}
+          style={`left: ${n.x}px; top: ${n.y}px; width: ${n.w}px; height: ${n.h}px; --i: ${i}`}
+        >
+          <span class="top">
+            <span class="badge" style={`--tag: var(--tag-${tagColour(n.label)})`}>
+              {n.label}
+            </span>
+            {n.step && (
+              <span class="step" title={`Part ${n.step.n} of ${n.step.of} in ${n.series}`}>
+                {n.step.n}/{n.step.of}
+              </span>
+            )}
+          </span>
+          <span class="title" lang={n.lang}>
+            {n.title}
+          </span>
+          <span class="meta">{day(n.date)}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <div class="chip-top ui" data-ui>
+    <h1>Knowledge map</h1>
+    <span class="count">{graph.nodes.length} nodes</span>
+    <button type="button" class="icon-btn" data-keys-open aria-label="Show keyboard shortcuts">
+      ?
+    </button>
+  </div>
+
+  <details class="legend ui" data-ui open>
+    <summary>Legend</summary>
+    <ul>
+      <li>
+        <span class="sw sw-entry"></span> Entry <small>one thing learned</small>
+      </li>
+      <li>
+        <span class="sw sw-series"></span> In a series <small>a numbered chain</small>
+      </li>
+      <li>
+        <span class="sw sw-project"></span> Project <small>built on its own</small>
+      </li>
+      <li>
+        <span class="line feeds"></span> feeds <small>next step in a series</small>
+      </li>
+      <li>
+        <span class="line relates"></span> relates <small>linked across topics</small>
+      </li>
+    </ul>
+  </details>
+
+  <aside class="panel ui" data-ui data-panel hidden aria-label="Selected entry">
+    <button type="button" class="icon-btn close" data-panel-close aria-label="Close details">
+      <Icon name="close" size={16} />
+    </button>
+    <p class="p-badge" data-p-label></p>
+    <h2 data-p-title></h2>
+    <p class="p-desc" data-p-desc></p>
+    <ul class="p-tags" data-p-tags aria-label="Tags"></ul>
+    <p class="p-meta" data-p-meta></p>
+    <a class="button button-primary" data-p-open href="#">
+      Open
+    </a>
+  </aside>
+
+  <svg
+    class="mini ui"
+    data-ui
+    data-mini
+    viewBox={`0 0 ${graph.width} ${graph.height}`}
+    role="img"
+    aria-label="Overview of the whole map"
+  >
+    {graph.groups.map((g) => (
+      <rect class="m-group" x={g.x} y={g.y} width={g.w} height={g.h} />
+    ))}
+    {graph.nodes.map((n) => (
+      <rect class="m-node" data-m={n.nodeId} x={n.x} y={n.y} width={n.w} height={n.h} />
+    ))}
+    <rect class="m-view" data-m-view x="0" y="0" width="0" height="0"></rect>
+  </svg>
+
+  <div class="zoom ui" data-ui role="group" aria-label="Zoom">
+    <button type="button" class="icon-btn" data-zoom-out aria-label="Zoom out">
+      −
+    </button>
+    <span class="level" data-level aria-hidden="true">
+      100%
+    </span>
+    <button type="button" class="icon-btn" data-zoom-in aria-label="Zoom in">
+      +
+    </button>
+    <button type="button" class="text-btn" data-zoom-one aria-label="Actual size">
+      1:1
+    </button>
+    <button type="button" class="text-btn" data-zoom-fit aria-label="Fit everything">
+      Fit
+    </button>
+  </div>
+
+  <p class="visually-hidden" role="status" aria-live="polite" data-status></p>
+
+  <dialog class="keys" data-keys aria-labelledby="keys-title">
+    <h2 id="keys-title">Keyboard and mouse</h2>
+    <dl>
+      <div>
+        <dt>Drag</dt>
+        <dd>move the map</dd>
+      </div>
+      <div>
+        <dt>Scroll</dt>
+        <dd>zoom at the pointer</dd>
+      </div>
+      <div>
+        <dt>Click</dt>
+        <dd>show details</dd>
+      </div>
+      <div>
+        <dt>Double-click, Enter</dt>
+        <dd>open the entry</dd>
+      </div>
+      <div>
+        <dt>Arrow keys</dt>
+        <dd>move the map (Shift for more)</dd>
+      </div>
+      <div>
+        <dt>+ and −</dt>
+        <dd>zoom in and out</dd>
+      </div>
+      <div>
+        <dt>0</dt>
+        <dd>actual size</dd>
+      </div>
+      <div>
+        <dt>F</dt>
+        <dd>fit everything</dd>
+      </div>
+      <div>
+        <dt>Tab</dt>
+        <dd>step through entries</dd>
+      </div>
+      <div>
+        <dt>Esc</dt>
+        <dd>close this, or clear the selection</dd>
+      </div>
+    </dl>
+    <form method="dialog">
+      <button class="button button-quiet" autofocus>
+        Close
+      </button>
+    </form>
+  </dialog>
+
+  <script type="application/json" id="map-data" set:html={JSON.stringify(data)} />
+</section>
+
+<script>
+  import {
+    centreOn,
+    fitTransform,
+    panBy,
+    revealRect,
+    visibleRect,
+    zoomAt,
+    type Transform,
+  } from '../../utils/viewport';
+
+  interface MapNode {
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    title: string;
+    description: string;
+    url: string;
+    label: string;
+    kind: string;
+    tags: string[];
+    date: string;
+    step: { n: number; of: number } | null;
+  }
+  interface MapData {
+    width: number;
+    height: number;
+    nodes: MapNode[];
+    edges: { from: string; to: string }[];
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-map]');
+  if (root) start(root);
+
+  function start(root: HTMLElement) {
+    const q = <T extends Element>(sel: string) => root.querySelector<T>(sel);
+    const viewport = q<HTMLElement>('.viewport');
+    const world = q<HTMLElement>('.world');
+    const raw = q<HTMLScriptElement>('#map-data')?.textContent;
+    if (!viewport || !world || !raw) return;
+    const data = JSON.parse(raw) as MapData;
+    const nodesById = new Map(data.nodes.map((n) => [n.id, n]));
+    const links = new Map<string, Set<string>>();
+    for (const e of data.edges) {
+      links.set(e.from, (links.get(e.from) ?? new Set()).add(e.to));
+      links.set(e.to, (links.get(e.to) ?? new Set()).add(e.from));
+    }
+
+    const level = q<HTMLElement>('[data-level]');
+    const status = q<HTMLElement>('[data-status]');
+    const panel = q<HTMLElement>('[data-panel]');
+    const mini = q<SVGSVGElement>('[data-mini]');
+    const miniView = q<SVGRectElement>('[data-m-view]');
+    const keys = q<HTMLDialogElement>('[data-keys]');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+    let t: Transform = { x: 0, y: 0, k: 1 };
+    let touched = false;
+    let selected: string | null = null;
+    let announceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    root.dataset.ready = '';
+    const size = () => {
+      const r = viewport.getBoundingClientRect();
+      return { w: r.width, h: r.height };
+    };
+    const announce = (text: string) => {
+      clearTimeout(announceTimer);
+      announceTimer = setTimeout(() => {
+        if (status) status.textContent = text;
+      }, 250);
+    };
+
+    function apply() {
+      world!.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.k})`;
+      if (level) level.textContent = `${Math.round(t.k * 100)}%`;
+      if (miniView) {
+        const v = visibleRect(t, size());
+        miniView.setAttribute('x', String(v.x));
+        miniView.setAttribute('y', String(v.y));
+        miniView.setAttribute('width', String(v.w));
+        miniView.setAttribute('height', String(v.h));
+      }
+    }
+
+    // Moves ease toward their target a little more every frame, so wheel zoom, the buttons, the keys
+    // and "fit" all glide; a drag or a pinch writes the transform directly and cancels any glide.
+    let target: Transform | null = null;
+    let raf = 0;
+    let lastFrame = 0;
+    const current = () => target ?? t;
+    const cancelGlide = () => {
+      target = null;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    function step(now: number) {
+      raf = 0;
+      if (!target) return;
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      const f = 1 - Math.exp(-dt * 14);
+      t = {
+        x: t.x + (target.x - t.x) * f,
+        y: t.y + (target.y - t.y) * f,
+        k: t.k + (target.k - t.k) * f,
+      };
+      if (
+        Math.abs(target.x - t.x) < 0.2 &&
+        Math.abs(target.y - t.y) < 0.2 &&
+        Math.abs(target.k - t.k) < 0.0005
+      ) {
+        t = target;
+        target = null;
+        apply();
+        return;
+      }
+      apply();
+      raf = requestAnimationFrame(step);
+    }
+
+    /** Head for a new transform: eased over a few frames, or at once for a reader who wants less motion. */
+    function go(next: Transform, glide = true) {
+      if (!glide || reduced.matches) {
+        cancelGlide();
+        t = next;
+        apply();
+        return;
+      }
+      target = next;
+      if (!raf) {
+        lastFrame = performance.now();
+        raf = requestAnimationFrame(step);
+      }
+    }
+
+    const fit = () => fitTransform({ w: data.width, h: data.height }, size(), 40, 1);
+    const centre = () => ({ x: size().w / 2, y: size().h / 2 });
+
+    // Start framed on everything. On a narrow screen that would be too small to read, so begin at a
+    // readable size from the first column instead; "Fit" still shows the whole map.
+    const first = () => {
+      const f = fit();
+      t = f.k < 0.4 ? { k: 0.6, x: 24, y: 72 } : f;
+      apply();
+    };
+    const legend = q<HTMLDetailsElement>('.legend');
+    if (legend && matchMedia('(max-width: 40rem)').matches) legend.open = false;
+    first();
+    new ResizeObserver(() => (touched ? apply() : first())).observe(viewport);
+
+    // --- pan and pinch -------------------------------------------------------------------
+    const pointers = new Map<number, { x: number; y: number }>();
+    let panFrom: { x: number; y: number; t: Transform } | null = null;
+    let pinch: { d: number; cx: number; cy: number; t: Transform } | null = null;
+    let moved = false;
+    const local = (e: { clientX: number; clientY: number }) => {
+      const r = viewport.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+
+    viewport.addEventListener('pointerdown', (e) => {
+      if ((e.target as Element).closest('.node')) return;
+      viewport.setPointerCapture(e.pointerId);
+      cancelGlide();
+      pointers.set(e.pointerId, local(e));
+      moved = false;
+      if (pointers.size === 1) {
+        const p = local(e);
+        panFrom = { x: p.x, y: p.y, t };
+        viewport.classList.add('grabbing');
+      } else if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()] as [
+          { x: number; y: number },
+          { x: number; y: number },
+        ];
+        pinch = {
+          d: Math.hypot(a.x - b.x, a.y - b.y),
+          cx: (a.x + b.x) / 2,
+          cy: (a.y + b.y) / 2,
+          t,
+        };
+        panFrom = null;
+      }
+    });
+
+    viewport.addEventListener('pointermove', (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, local(e));
+      if (pinch && pointers.size >= 2) {
+        const [a, b] = [...pointers.values()] as [
+          { x: number; y: number },
+          { x: number; y: number },
+        ];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        const cx = (a.x + b.x) / 2;
+        const cy = (a.y + b.y) / 2;
+        t = panBy(
+          zoomAt(pinch.t, d / (pinch.d || 1), pinch.cx, pinch.cy),
+          cx - pinch.cx,
+          cy - pinch.cy,
+        );
+        touched = moved = true;
+        apply();
+      } else if (panFrom) {
+        const p = local(e);
+        const dx = p.x - panFrom.x;
+        const dy = p.y - panFrom.y;
+        if (Math.hypot(dx, dy) > 4) moved = true;
+        if (moved) {
+          t = { ...panFrom.t, x: panFrom.t.x + dx, y: panFrom.t.y + dy };
+          touched = true;
+          apply();
+        }
+      }
+    });
+
+    const release = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinch = null;
+      if (pointers.size === 0) {
+        panFrom = null;
+        viewport.classList.remove('grabbing');
+      }
+    };
+    viewport.addEventListener('pointerup', release);
+    viewport.addEventListener('pointercancel', release);
+
+    // A click on empty canvas (not the end of a drag) clears the selection.
+    viewport.addEventListener('click', (e) => {
+      if (moved) {
+        moved = false;
+        return;
+      }
+      if (!(e.target as Element).closest('.node')) select(null);
+    });
+
+    // --- zoom ----------------------------------------------------------------------------
+    viewport.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        const p = local(e);
+        go(zoomAt(current(), Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)), p.x, p.y));
+        touched = true;
+        announce(`Zoom ${Math.round(current().k * 100)} percent`);
+      },
+      { passive: false },
+    );
+
+    const zoomBy = (f: number) => {
+      const c = centre();
+      touched = true;
+      go(zoomAt(current(), f, c.x, c.y));
+      announce(`Zoom ${Math.round(current().k * 100)} percent`);
+    };
+    q('[data-zoom-in]')?.addEventListener('click', () => zoomBy(1.25));
+    q('[data-zoom-out]')?.addEventListener('click', () => zoomBy(1 / 1.25));
+    q('[data-zoom-one]')?.addEventListener('click', () => zoomBy(1 / current().k));
+    q('[data-zoom-fit]')?.addEventListener('click', () => {
+      touched = false;
+      go(fit());
+      announce('Fitted to show everything');
+    });
+
+    // --- highlight and selection ---------------------------------------------------------
+    const nodeEls = new Map(
+      [...root.querySelectorAll<HTMLElement>('.node')].map((el) => [el.dataset.id ?? '', el]),
+    );
+    const edgeEls = [...root.querySelectorAll<SVGPathElement>('.edge')];
+    const miniEls = new Map(
+      [...root.querySelectorAll<SVGRectElement>('[data-m]')].map((el) => [el.dataset.m ?? '', el]),
+    );
+
+    function lit(id: string | null) {
+      root!.toggleAttribute('data-hot', Boolean(id));
+      const group = id ? new Set([id, ...(links.get(id) ?? [])]) : new Set<string>();
+      for (const [nid, el] of nodeEls) el.classList.toggle('hot', group.has(nid));
+      for (const [nid, el] of miniEls) el.classList.toggle('hot', group.has(nid));
+      for (const el of edgeEls) {
+        el.classList.toggle('hot', Boolean(id) && (el.dataset.from === id || el.dataset.to === id));
+      }
+    }
+
+    root.addEventListener('pointerover', (e) => {
+      const n = (e.target as Element).closest<HTMLElement>('.node');
+      if (n) lit(n.dataset.id ?? null);
+    });
+    root.addEventListener('pointerout', (e) => {
+      const n = (e.target as Element).closest<HTMLElement>('.node');
+      if (n && !n.matches(':focus-visible')) lit(selected);
+    });
+    root.addEventListener('focusin', (e) => {
+      const n = (e.target as Element).closest<HTMLElement>('.node');
+      if (!n) return;
+      lit(n.dataset.id ?? null);
+      const m = nodesById.get(n.dataset.id ?? '');
+      if (m) {
+        const next = revealRect(t, size(), m);
+        if (next !== t) {
+          touched = true;
+          go(next);
+        }
+      }
+    });
+    root.addEventListener('focusout', (e) => {
+      if ((e.target as Element).closest('.node')) lit(selected);
+    });
+
+    function select(id: string | null) {
+      selected = id;
+      for (const [nid, el] of nodeEls) el.classList.toggle('selected', nid === id);
+      lit(id);
+      const m = id ? nodesById.get(id) : null;
+      if (!panel) return;
+      if (!m) {
+        panel.hidden = true;
+        return;
+      }
+      const set = (sel: string, text: string) => {
+        const el = panel.querySelector(sel);
+        if (el) el.textContent = text;
+      };
+      set('[data-p-label]', m.label);
+      set('[data-p-title]', m.title);
+      set('[data-p-desc]', m.description);
+      const linked = links.get(m.id)?.size ?? 0;
+      set(
+        '[data-p-meta]',
+        `${m.date}${m.step ? `, part ${m.step.n} of ${m.step.of}` : ''}, ${linked} ${linked === 1 ? 'link' : 'links'}`,
+      );
+      const tags = panel.querySelector('[data-p-tags]');
+      if (tags) {
+        tags.replaceChildren(
+          ...m.tags.map((tag) => {
+            const li = document.createElement('li');
+            li.textContent = `#${tag}`;
+            return li;
+          }),
+        );
+      }
+      const open = panel.querySelector<HTMLAnchorElement>('[data-p-open]');
+      if (open) {
+        open.href = m.url;
+        open.textContent = m.kind === 'project' ? 'Open project' : 'Open entry';
+      }
+      panel.hidden = false;
+      announce(`Selected ${m.title}`);
+    }
+
+    // Single click shows details; double click (or Enter, which arrives with detail 0) opens the page.
+    world.addEventListener('click', (e) => {
+      const n = (e.target as Element).closest<HTMLAnchorElement>('.node');
+      if (!n || e.detail === 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      if (e.detail >= 2) location.href = n.href;
+      else select(n.dataset.id ?? null);
+    });
+    q('[data-panel-close]')?.addEventListener('click', () => select(null));
+
+    // --- minimap -------------------------------------------------------------------------
+    let draggingMini = false;
+    const toWorld = (e: PointerEvent) => {
+      const r = mini?.getBoundingClientRect();
+      if (!r) return null;
+      return {
+        x: ((e.clientX - r.left) / r.width) * data.width,
+        y: ((e.clientY - r.top) / r.height) * data.height,
+      };
+    };
+    mini?.addEventListener('pointerdown', (e) => {
+      draggingMini = true;
+      mini.setPointerCapture(e.pointerId);
+      const p = toWorld(e);
+      if (p) {
+        touched = true;
+        go(centreOn(t, size(), p.x, p.y), false);
+      }
+    });
+    mini?.addEventListener('pointermove', (e) => {
+      if (!draggingMini) return;
+      const p = toWorld(e);
+      if (p) {
+        touched = true;
+        go(centreOn(t, size(), p.x, p.y), false);
+      }
+    });
+    mini?.addEventListener('pointerup', () => (draggingMini = false));
+    mini?.addEventListener('pointercancel', () => (draggingMini = false));
+
+    // --- keyboard ------------------------------------------------------------------------
+    const openKeys = () => keys?.showModal();
+    q('[data-keys-open]')?.addEventListener('click', openKeys);
+    root.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const step = e.shiftKey ? 240 : 80;
+      const move = (dx: number, dy: number) => {
+        e.preventDefault();
+        touched = true;
+        go(panBy(current(), dx, dy));
+      };
+      switch (e.key) {
+        case 'ArrowLeft':
+          return move(step, 0);
+        case 'ArrowRight':
+          return move(-step, 0);
+        case 'ArrowUp':
+          return move(0, step);
+        case 'ArrowDown':
+          return move(0, -step);
+        case '+':
+        case '=':
+          e.preventDefault();
+          return zoomBy(1.25);
+        case '-':
+        case '_':
+          e.preventDefault();
+          return zoomBy(1 / 1.25);
+        case '0':
+          e.preventDefault();
+          return zoomBy(1 / current().k);
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          touched = false;
+          go(fit());
+          return;
+        case '?':
+          e.preventDefault();
+          return openKeys();
+        case 'Escape':
+          if (selected) {
+            e.preventDefault();
+            select(null);
+          }
+          return;
+      }
+    });
+  }
+</script>
+
+<style>
+  .map {
+    position: relative;
+    height: clamp(520px, calc(100dvh - 110px), 920px);
+    overflow: hidden;
+    border-block: var(--rule-hair) solid var(--color-rule);
+    background: var(--color-paper);
+  }
+
+  /* The frame scrolls on its own until the script takes over, so the diagram works without it. */
+  .viewport {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    outline-offset: -3px;
+  }
+
+  .map[data-ready] .viewport {
+    overflow: hidden;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .viewport.grabbing {
+    cursor: grabbing;
+  }
+
+  .world {
+    position: relative;
+    transform-origin: 0 0;
+    /* The script eases the movement itself, so the browser must not add a transition of its own. */
+    transition: none;
+  }
+
+  .edges {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .edge {
+    fill: none;
+    stroke-width: 1.6;
+    transition:
+      opacity var(--dur-short) var(--ease-out),
+      stroke var(--dur-short) var(--ease-out);
+  }
+
+  .edge.feeds {
+    stroke: var(--tag-2);
+    stroke-dasharray: 1;
+  }
+
+  .edge.relates {
+    stroke: var(--color-muted);
+    stroke-dasharray: 6 5;
+  }
+
+  .arrow-head {
+    fill: var(--tag-2);
+  }
+
+  .group {
+    position: absolute;
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: color-mix(in oklab, var(--color-paper-2) 55%, transparent);
+    transition: opacity var(--dur-short) var(--ease-out);
+  }
+
+  .group-label {
+    position: absolute;
+    top: var(--space-sm);
+    left: var(--space-md);
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    color: var(--color-ink-2);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .group-label small {
+    color: var(--color-muted);
+    font-weight: 400;
+  }
+
+  .node {
+    position: absolute;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--space-2xs);
+    padding: 8px 12px;
+    border: 1.5px solid var(--color-rule-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+    text-decoration: none;
+    transition:
+      border-color var(--dur-short) var(--ease-out),
+      background-color var(--dur-short) var(--ease-out),
+      opacity var(--dur-short) var(--ease-out),
+      translate var(--dur-short) var(--ease-out);
+  }
+
+  .node.series {
+    box-shadow: inset 3px 0 0 var(--tag-2);
+  }
+
+  .node.project {
+    border-style: dashed;
+    border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-rule-strong));
+  }
+
+  .node:hover,
+  .node:focus-visible,
+  .node.selected {
+    translate: 0 -2px;
+    border-color: var(--color-accent);
+    background: color-mix(in oklab, var(--color-accent) 8%, var(--color-paper-2));
+  }
+
+  .node.selected {
+    outline: 2px solid color-mix(in oklab, var(--color-accent) 45%, transparent);
+    outline-offset: 2px;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+  }
+
+  .badge {
+    padding: 0 var(--space-xs);
+    border: var(--rule-hair) solid color-mix(in oklab, var(--tag) 45%, transparent);
+    border-radius: var(--radius-pill);
+    background: color-mix(in oklab, var(--tag) 14%, transparent);
+    color: var(--tag);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.55;
+  }
+
+  .step {
+    color: var(--color-muted);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .meta {
+    color: var(--color-muted);
+    font-size: 0.6875rem;
+  }
+
+  /* Hover, focus or selection lights a node's neighbours and quiets everything else. */
+  .map[data-hot] .node:not(.hot),
+  .map[data-hot] .group,
+  .map[data-hot] .edge:not(.hot) {
+    opacity: 0.22;
+  }
+
+  .edge.hot {
+    stroke: var(--color-accent);
+    stroke-width: 2.4;
+  }
+
+  /* Interface laid over the canvas. */
+  .ui {
+    position: absolute;
+    z-index: var(--z-raised);
+  }
+
+  .chip-top {
+    top: var(--space-md);
+    left: var(--space-md);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-2xs) var(--space-xs) var(--space-2xs) var(--space-md);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-pill);
+    background: color-mix(in oklab, var(--color-paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .chip-top h1 {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .count {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .icon-btn,
+  .text-btn {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    border: var(--rule-hair) solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-ink-2);
+    font-size: var(--text-md);
+    cursor: pointer;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      background-color var(--dur-short) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out);
+  }
+
+  .text-btn {
+    padding-inline: var(--space-sm);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .icon-btn:hover,
+  .text-btn:hover {
+    border-color: var(--color-rule-strong);
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
+  .chip-top .icon-btn {
+    min-width: 32px;
+    min-height: 32px;
+    border-color: var(--color-rule-strong);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
+  }
+
+  .legend {
+    left: var(--space-md);
+    bottom: var(--space-md);
+    min-width: 232px;
+    padding: var(--space-sm) var(--space-md);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+    backdrop-filter: blur(8px);
+    font-size: var(--text-xs);
+  }
+
+  .legend summary {
+    min-height: 28px;
+    color: var(--color-ink-2);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .legend ul {
+    display: grid;
+    gap: var(--space-xs);
+    margin: var(--space-xs) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .legend li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .legend small {
+    color: var(--color-muted);
+    font-size: inherit;
+  }
+
+  .sw {
+    width: 22px;
+    height: 14px;
+    border: 1.5px solid var(--color-rule-strong);
+    border-radius: 3px;
+    background: var(--color-paper-2);
+  }
+
+  .sw-series {
+    box-shadow: inset 3px 0 0 var(--tag-2);
+  }
+
+  .sw-project {
+    border-style: dashed;
+    border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-rule-strong));
+  }
+
+  .line {
+    width: 22px;
+    height: 0;
+    border-top: 2px solid var(--tag-2);
+  }
+
+  .line.relates {
+    border-top: 2px dashed var(--color-muted);
+  }
+
+  .zoom {
+    right: var(--space-md);
+    bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    padding: var(--space-3xs);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .level {
+    min-width: 3.5em;
+    color: var(--color-ink-2);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  .mini {
+    right: var(--space-md);
+    bottom: calc(var(--space-md) + 60px);
+    width: 168px;
+    height: auto;
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .m-group {
+    fill: none;
+    stroke: var(--color-rule-strong);
+    stroke-width: 3;
+  }
+
+  .m-node {
+    fill: var(--color-muted);
+    opacity: 0.6;
+  }
+
+  .m-node.hot {
+    fill: var(--color-accent);
+    opacity: 1;
+  }
+
+  .m-view {
+    fill: color-mix(in oklab, var(--color-accent) 12%, transparent);
+    stroke: var(--color-accent);
+    stroke-width: 6;
+  }
+
+  .panel {
+    top: var(--space-md);
+    right: var(--space-md);
+    display: grid;
+    gap: var(--space-xs);
+    width: min(320px, calc(100% - 2 * var(--space-md)));
+    padding: var(--space-md);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: color-mix(in oklab, var(--color-paper) 94%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .panel[hidden] {
+    display: none;
+  }
+
+  .panel .close {
+    position: absolute;
+    top: var(--space-2xs);
+    right: var(--space-2xs);
+  }
+
+  .p-badge {
+    color: var(--color-accent);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .panel h2 {
+    text-wrap: balance;
+    padding-right: 40px;
+    font-size: var(--text-md);
+    font-weight: 600;
+    line-height: var(--lh-snug);
+  }
+
+  .p-desc {
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    line-height: var(--lh-copy);
+  }
+
+  .p-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs) var(--space-sm);
+    margin: 0;
+    padding: 0;
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+    list-style: none;
+  }
+
+  .p-meta {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .panel .button {
+    justify-self: start;
+    margin-top: var(--space-xs);
+  }
+
+  .keys {
+    width: 460px;
+    max-width: calc(100% - 2 * var(--gutter));
+    padding: var(--space-lg);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  .keys::backdrop {
+    background: color-mix(in oklab, var(--color-paper) 55%, transparent);
+    backdrop-filter: blur(4px);
+  }
+
+  .keys h2 {
+    text-wrap: balance;
+    margin-bottom: var(--space-md);
+    font-size: var(--text-md);
+    font-weight: 600;
+  }
+
+  .keys dl {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0 0 var(--space-lg);
+  }
+
+  .keys dl div {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: var(--space-md);
+    font-size: var(--text-sm);
+  }
+
+  .keys dt {
+    font-weight: 600;
+  }
+
+  .keys dd {
+    margin: 0;
+    color: var(--color-ink-2);
+  }
+
+  /* Motion: nodes arrive one after another and the feed lines draw themselves, once. */
+  @media (prefers-reduced-motion: no-preference) {
+    .node {
+      animation: arrive 520ms var(--ease-out) calc(var(--i) * 28ms) backwards;
+    }
+
+    .edge.feeds {
+      animation: draw 900ms var(--ease-out) calc(var(--i) * 50ms + 350ms) backwards;
+    }
+
+    .edge.relates {
+      animation: fade 700ms var(--ease-out) calc(var(--i) * 50ms + 600ms) backwards;
+    }
+
+    .group {
+      animation: arrive 600ms var(--ease-out) calc(var(--g) * 80ms) backwards;
+    }
+
+    /* A lit link carries a pulse along it, only while the node is hovered, focused or selected. */
+    .edge.relates.hot {
+      animation: flow 700ms linear infinite;
+    }
+
+    .panel:not([hidden]) {
+      animation: slide-in 300ms var(--ease-out) backwards;
+    }
+  }
+
+  @keyframes arrive {
+    from {
+      opacity: 0;
+      scale: 0.94;
+    }
+  }
+
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -11;
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      translate: 16px 0;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .map {
+      height: min(72dvh, 600px);
+    }
+
+    .mini {
+      display: none;
+    }
+
+    .legend {
+      min-width: 0;
+      max-width: 62%;
+    }
+
+    .legend small {
+      display: none;
+    }
+
+    .keys dl div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+    }
+  }
+</style>

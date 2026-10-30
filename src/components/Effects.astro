@@ -1,0 +1,52 @@
+---
+/** Scroll reveal: blocks that start below the fold fade up once as they enter the viewport. */
+---
+
+<script>
+  const SELECTOR = [
+    '.prose > *',
+    '.entry',
+    '.rows > li',
+    '.block-title',
+    '.side > *',
+    '.rail-block',
+    '.neighbours',
+    '.related',
+    '.topics',
+  ].join(',');
+
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+    const targets = [...document.querySelectorAll<HTMLElement>(SELECTOR)].filter(
+      (el) => el.getBoundingClientRect().top > innerHeight,
+    );
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let n = 0;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const el = entry.target as HTMLElement;
+          el.style.transitionDelay = `${Math.min(n++, 5) * 60}ms`;
+          el.classList.add('in');
+          observer.unobserve(el);
+          // Drop the hidden state afterwards so hover transforms on the element work normally.
+          el.addEventListener(
+            'transitionend',
+            () => {
+              el.removeAttribute('data-reveal');
+              el.classList.remove('in');
+              el.style.transitionDelay = '';
+            },
+            { once: true },
+          );
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+    );
+
+    for (const el of targets) {
+      el.dataset.reveal = '';
+      observer.observe(el);
+    }
+  }
+</script>

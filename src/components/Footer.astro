@@ -1,0 +1,76 @@
+---
+import { site } from '../config/site';
+import Icon from './Icon.astro';
+import RuneMark from './RuneMark.astro';
+
+const year = new Date().getUTCFullYear();
+---
+
+<footer class="site-footer" data-pagefind-ignore>
+  <div class="shell foot">
+    <div class="sign">
+      <RuneMark />
+      <p class="slogan">{site.slogan}</p>
+    </div>
+    <div class="meta">
+      {site.author.github && (
+        <a href={site.author.github} rel="me noreferrer">
+          <Icon name="github" size={16} /> GitHub
+        </a>
+      )}
+      <span>{year}</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: var(--space-xl);
+    border-top: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-lg);
+    padding-block: var(--space-md);
+  }
+
+  .sign {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-md);
+  }
+
+  .sign :global(.rune-mark) {
+    font-size: 0.875rem;
+  }
+
+  .slogan {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .meta a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-height: 32px;
+    text-decoration: none;
+  }
+
+  .meta a:hover {
+    color: var(--color-accent);
+  }
+</style>

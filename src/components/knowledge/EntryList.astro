@@ -1,0 +1,181 @@
+---
+/** Numbered archive rows, after navfolio's post stack: number, title, meta, description. */
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { withBase } from '../../utils/url';
+import EntryMeta from './EntryMeta.astro';
+
+interface Props {
+  entries: CollectionEntry<'knowledge'>[];
+  offset?: number;
+  compact?: boolean;
+}
+
+const { entries, offset = 0, compact = false } = Astro.props;
+---
+
+<ol class:list={['entries', { compact }]}>
+  {entries.map((entry, i) => (
+    <li class:list={['entry', { 'has-cover': !compact && entry.data.heroImage }]}>
+      <span class="index" aria-hidden="true">
+        {String(offset + i + 1).padStart(2, '0')}
+      </span>
+      <div class="body">
+        <h3 class="title">
+          <a href={withBase(`/knowledge/${entry.id}/`)} lang={entry.data.lang}>
+            {entry.data.title}
+          </a>
+        </h3>
+        <EntryMeta entry={entry} links={!compact} />
+        {!compact && (
+          <p class="excerpt" lang={entry.data.lang}>
+            {entry.data.description}
+          </p>
+        )}
+      </div>
+      {!compact && entry.data.heroImage && (
+        <a
+          class="cover"
+          href={withBase(`/knowledge/${entry.id}/`)}
+          tabindex="-1"
+          aria-hidden="true"
+        >
+          <Image
+            src={entry.data.heroImage}
+            alt=""
+            width={560}
+            height={315}
+            loading="lazy"
+            decoding="async"
+          />
+        </a>
+      )}
+    </li>
+  ))}
+</ol>
+
+<style>
+  .entries {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: var(--space-md);
+    padding-block: var(--space-lg);
+    border-top: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .compact .entry {
+    padding-block: var(--space-md);
+  }
+
+  .index {
+    padding-top: 0.3em;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .body {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+  }
+
+  .title {
+    font-size: var(--text-lg);
+    font-weight: 500;
+    letter-spacing: var(--tracking-display);
+    line-height: var(--lh-snug);
+  }
+
+  .compact .title {
+    font-size: var(--text-md);
+  }
+
+  .title a {
+    display: inline-block;
+    text-decoration: none;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      transform var(--dur-short) var(--ease-out);
+  }
+
+  .title a:hover {
+    transform: translateX(3px);
+  }
+
+  .index {
+    transition: color var(--dur-short) var(--ease-out);
+  }
+
+  .entry:hover .index {
+    color: var(--color-accent);
+  }
+
+  .excerpt {
+    max-width: 68ch;
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    line-height: var(--lh-copy);
+  }
+
+  /* An entry with a cover keeps its text column and gains an image that fades in from the left. */
+  .has-cover {
+    grid-template-columns: 2.5rem minmax(0, 1fr) clamp(180px, 34%, 300px);
+    align-items: start;
+  }
+
+  .cover {
+    display: block;
+    align-self: start;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 70%);
+    mask-image: linear-gradient(to right, transparent 0, #000 70%);
+    opacity: 0.5;
+    transition: opacity var(--dur-short) var(--ease-out);
+  }
+
+  .cover :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(6px);
+    transform: scale(1.08);
+    transition:
+      filter var(--dur-long) var(--ease-out),
+      transform var(--dur-long) var(--ease-out);
+  }
+
+  .has-cover:hover .cover {
+    opacity: 0.8;
+  }
+
+  .has-cover:hover .cover :global(img) {
+    filter: blur(3px);
+    transform: scale(1.12);
+  }
+
+  @media (max-width: 40rem) {
+    .has-cover {
+      grid-template-columns: 2.5rem minmax(0, 1fr);
+      align-items: start;
+    }
+
+    /* Narrow screens: the cover drops below the text, full width, with a fade at the top. */
+    .cover {
+      grid-column: 2;
+      aspect-ratio: 21 / 9;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 65%);
+      mask-image: linear-gradient(to bottom, transparent 0, #000 65%);
+    }
+  }
+</style>

@@ -1,0 +1,84 @@
+---
+import Effects from '../components/Effects.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import Search from '../components/Search.astro';
+import { site } from '../config/site';
+import '../styles/global.css';
+import mapleText from '@fontsource/maple-mono/files/maple-mono-latin-400-normal.woff2?url';
+import runeFont from '@fontsource/noto-sans-runic/files/noto-sans-runic-runic-400-normal.woff2?url';
+import { withBase } from '../utils/url';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Language of the main content; the interface is English. */
+  lang?: 'en' | 'vi';
+  type?: 'website' | 'article';
+}
+
+const { title, description = site.description, lang = 'en', type = 'website' } = Astro.props;
+const fullTitle = title ? `${title} — ${site.rune}` : site.rune;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang={lang} data-mode="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+    <link rel="sitemap" href={withBase('/sitemap-index.xml')} />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="generator" content={Astro.generator} />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+      try {
+        const mode = localStorage.getItem('mode');
+        if (mode === 'light' || mode === 'dark') document.documentElement.dataset.mode = mode;
+      } catch {
+        /* storage blocked: stay on the default dark rendering */
+      }
+    </script>
+    <!-- The body face and the rune logo are on every page: fetch them early so text and logo do not flash. -->
+    <link rel="preload" href={mapleText} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={runeFont} as="font" type="font/woff2" crossorigin />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip" href="#content">
+      Skip to content
+    </a>
+    <Header />
+    <main id="content" data-pagefind-body={type === 'article' ? '' : undefined}>
+      <slot />
+    </main>
+    <Footer />
+    <Search />
+    <Effects />
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    top: var(--space-xs);
+    left: var(--space-xs);
+    z-index: var(--z-toast);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    transform: translateY(-200%);
+  }
+
+  .skip:focus-visible {
+    transform: none;
+  }
+</style>

@@ -1,0 +1,93 @@
+---
+/** Every knowledge listing: index, its pages, and the area / category / tag filters. */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getKnowledge, type Knowledge } from '../../data/knowledge';
+import { groupCounts } from '../../utils/content';
+import { tagColour } from '../../utils/tags';
+import { withBase } from '../../utils/url';
+import EntryList from './EntryList.astro';
+import KnowledgeHead from './KnowledgeHead.astro';
+import Pagination from './Pagination.astro';
+
+interface Props {
+  title: string;
+  note: string;
+  entries: Knowledge[];
+  offset?: number;
+  page?: number;
+  totalPages?: number;
+  /** Which filter this page shows, to mark it current. */
+  current?: { kind: 'area' | 'category' | 'tag'; slug: string };
+}
+
+const { title, note, entries, offset = 0, page = 1, totalPages = 1, current } = Astro.props;
+const all = await getKnowledge();
+const categories = groupCounts(all, 'categories');
+const tags = groupCounts(all, 'tags');
+const isCurrent = (kind: string, slug: string) =>
+  current?.kind === kind && current.slug === slug ? 'page' : undefined;
+---
+
+<BaseLayout title={title} description={note}>
+  <div class="shell frame">
+    <section aria-labelledby="archive-title">
+      <KnowledgeHead
+        title={title}
+        note={note}
+        area={current?.kind === 'area' ? current.slug : undefined}
+        filtered={Boolean(current && current.kind !== 'area')}
+      />
+
+      {entries.length > 0 ? (
+        <EntryList entries={entries} offset={offset} />
+      ) : (
+        <p class="empty">Nothing has been archived here yet.</p>
+      )}
+      <Pagination page={page} totalPages={totalPages} />
+    </section>
+
+    <aside class="rail" aria-label="Browse the archive">
+      {categories.length > 0 && (
+        <section class="rail-block">
+          <h2>Categories</h2>
+          <div class="chips">
+            {categories.map((c) => (
+              <a
+                class="chip"
+                href={withBase(`/knowledge/categories/${c.slug}/`)}
+                aria-current={isCurrent('category', c.slug)}
+              >
+                {c.name} <span class="count">{c.count}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+      {tags.length > 0 && (
+        <section class="rail-block">
+          <h2>Tags</h2>
+          <div class="chips">
+            {tags.map((t) => (
+              <a
+                class="chip hashtag"
+                style={`--tag: var(--tag-${tagColour(t.name)})`}
+                href={withBase(`/knowledge/tags/${t.slug}/`)}
+                aria-current={isCurrent('tag', t.slug)}
+              >
+                #{t.name}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+    </aside>
+  </div>
+</BaseLayout>
+
+<style>
+  .empty {
+    padding-block: var(--space-xl);
+    border-top: var(--rule-hair) solid var(--color-rule);
+    color: var(--color-muted);
+  }
+</style>

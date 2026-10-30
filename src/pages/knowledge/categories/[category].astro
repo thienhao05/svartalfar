@@ -1,0 +1,27 @@
+---
+import type { GetStaticPaths } from 'astro';
+import ArchivePage from '../../../components/knowledge/ArchivePage.astro';
+import { getKnowledge } from '../../../data/knowledge';
+import { groupCounts, slugify } from '../../../utils/content';
+
+export const getStaticPaths = (async () => {
+  const all = await getKnowledge();
+  return groupCounts(all, 'categories').map((c) => ({
+    params: { category: c.slug },
+    props: {
+      name: c.name,
+      entries: all.filter((e) => e.data.categories.some((x) => slugify(x) === c.slug)),
+    },
+  }));
+}) satisfies GetStaticPaths;
+
+const { name, entries } = Astro.props;
+const { category } = Astro.params;
+---
+
+<ArchivePage
+  title={name}
+  note={`Entries filed under ${name}.`}
+  entries={entries}
+  current={{ kind: 'category', slug: category }}
+/>

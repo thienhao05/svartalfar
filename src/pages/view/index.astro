@@ -1,0 +1,45 @@
+---
+import KnowledgeMap from '../../components/view/KnowledgeMap.astro';
+import { areaLabels, getKnowledge } from '../../data/knowledge';
+import { getProjects, statusLabels } from '../../data/projects';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import type { GraphInput } from '../../utils/graph';
+import { withBase } from '../../utils/url';
+
+const [entries, projects] = await Promise.all([getKnowledge(), getProjects()]);
+
+const inputs: GraphInput[] = [
+  ...entries.map((e): GraphInput => ({
+    id: e.id,
+    kind: 'entry',
+    title: e.data.title,
+    description: e.data.description,
+    url: withBase(`/knowledge/${e.id}/`),
+    date: e.data.date,
+    label: areaLabels[e.data.area],
+    lang: e.data.lang,
+    categories: e.data.categories,
+    tags: e.data.tags,
+    related: e.data.related,
+    series: e.data.series,
+    seriesOrder: e.data.seriesOrder,
+  })),
+  ...projects.map((p): GraphInput => ({
+    id: p.id,
+    kind: 'project',
+    title: p.data.title,
+    description: p.data.description,
+    url: withBase(`/projects/${p.id}/`),
+    date: p.data.date,
+    label: statusLabels[p.data.status],
+    tags: p.data.stack,
+  })),
+];
+---
+
+<BaseLayout
+  title="View"
+  description="Everything learned and built, drawn as a map: topics, series and the links between them."
+>
+  <KnowledgeMap inputs={inputs} />
+</BaseLayout>

@@ -1,0 +1,74 @@
+---
+/** Title, note, the area filter and the view switcher: shared by the list and the three views. */
+import { knowledgeAreas } from '../../content.config';
+import { areaLabels, getKnowledge } from '../../data/knowledge';
+import { withBase } from '../../utils/url';
+import ViewSwitch from './ViewSwitch.astro';
+
+interface Props {
+  title: string;
+  note: string;
+  /** The area filter currently applied, if any. */
+  area?: string | undefined;
+  /** Whether this is a filtered view of the list (a category, a tag) rather than the full list. */
+  filtered?: boolean;
+  view?: 'series' | 'tags' | 'years' | undefined;
+}
+
+const { title, note, area, filtered = false, view } = Astro.props;
+const all = await getKnowledge();
+const count = (a: string) => all.filter((e) => e.data.area === a).length;
+const onAll = !view && !area && !filtered;
+---
+
+<header class="head">
+  <h1 id="archive-title">{title}</h1>
+  <p>{note}</p>
+  <div class="bar">
+    <ViewSwitch current={view} />
+    <nav class="chips" aria-label="Areas">
+      <a class="chip" href={withBase('/knowledge/')} aria-current={onAll ? 'page' : undefined}>
+        All <span class="count">{all.length}</span>
+      </a>
+      {knowledgeAreas.map((a) => (
+        <a
+          class="chip"
+          href={withBase(`/knowledge/area/${a}/`)}
+          aria-current={area === a ? 'page' : undefined}
+        >
+          {areaLabels[a]} <span class="count">{count(a)}</span>
+        </a>
+      ))}
+    </nav>
+  </div>
+</header>
+
+<style>
+  .head {
+    display: grid;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    font-weight: 500;
+    letter-spacing: var(--tracking-display);
+    line-height: var(--lh-heading);
+    max-width: 32ch;
+  }
+
+  p {
+    max-width: 60ch;
+    color: var(--color-ink-2);
+    font-size: var(--text-md);
+    line-height: var(--lh-copy);
+  }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm) var(--space-md);
+  }
+</style>

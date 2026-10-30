@@ -1,0 +1,241 @@
+---
+/** Writing activity, after navfolio's BlogHeatmap: real publish and update dates only. */
+import { buildHeatmap } from '../../utils/heatmap';
+import { withBase } from '../../utils/url';
+import type { Knowledge } from '../../data/knowledge';
+import FormattedDate from '../FormattedDate.astro';
+import Icon from '../Icon.astro';
+
+interface Props {
+  entries: Knowledge[];
+  weeks?: number;
+}
+
+const { entries, weeks = 18 } = Astro.props;
+const dates = entries.flatMap((e) =>
+  e.data.updated ? [e.data.date, e.data.updated] : [e.data.date],
+);
+const map = buildHeatmap(dates, weeks, new Date());
+const latest = entries[0];
+const label = (count: number) => `${count} ${count === 1 ? 'entry' : 'entries'}`;
+---
+
+<section class="heatmap" aria-label="Writing activity">
+  <dl class="stats">
+    <div>
+      <dt>Total entries</dt>
+      <dd>{entries.length}</dd>
+    </div>
+    <div>
+      <dt>Active days</dt>
+      <dd>{map.activeDays}</dd>
+    </div>
+    <div>
+      <dt>Day streak</dt>
+      <dd>{map.streak}</dd>
+    </div>
+  </dl>
+
+  {latest && (
+    <a class="latest" href={withBase(`/knowledge/${latest.id}/`)}>
+      <span class="tag">Latest</span>
+      <span class="row">
+        <strong lang={latest.data.lang}>{latest.data.title}</strong>
+        <time datetime={latest.data.date.toISOString()}>
+          <FormattedDate date={latest.data.date} />
+        </time>
+        <Icon name="external" size={14} />
+      </span>
+    </a>
+  )}
+
+  <div class="plot">
+    <div class="weekdays" aria-hidden="true">
+      <span>Mon</span>
+      <span>Wed</span>
+      <span>Fri</span>
+    </div>
+    <div
+      class="grid"
+      role="img"
+      aria-label={`Writing activity over the last ${weeks} weeks: ${label(map.total)} on ${map.activeDays} days`}
+    >
+      {map.days.map((day) => (
+        <span
+          class:list={['cell', `l${day.level}`, { future: day.future }]}
+          title={day.future ? undefined : `${day.date}: ${label(day.count)}`}
+        />
+      ))}
+    </div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span>Less</span>
+    <i class="cell l0"></i>
+    <i class="cell l1"></i>
+    <i class="cell l2"></i>
+    <i class="cell l3"></i>
+    <i class="cell l4"></i>
+    <span>More</span>
+  </div>
+</section>
+
+<style>
+  .heatmap {
+    display: grid;
+    gap: var(--space-md);
+    text-align: left;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: space-between;
+    margin: 0;
+  }
+
+  .stats div {
+    display: grid;
+    gap: var(--space-3xs);
+  }
+
+  dd {
+    order: -1;
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  dt {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .latest {
+    display: grid;
+    gap: var(--space-2xs);
+    padding: var(--space-sm);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-sm);
+    background: var(--color-paper-2);
+    text-decoration: none;
+  }
+
+  .latest:hover {
+    border-color: var(--color-rule-strong);
+  }
+
+  .tag {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .row strong {
+    overflow: hidden;
+    font-size: var(--text-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row time {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+
+  .row :global(svg) {
+    color: var(--color-accent);
+  }
+
+  .plot {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(0, 1fr);
+    gap: var(--space-xs);
+    align-items: start;
+  }
+
+  .weekdays {
+    display: grid;
+    grid-template-rows: repeat(3, 10px);
+    gap: calc(10px + 3px);
+    padding-top: 13px;
+    color: var(--color-muted);
+    font-size: 0.6rem;
+    line-height: 10px;
+  }
+
+  .grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(7, 10px);
+    grid-auto-columns: 10px;
+    gap: 3px;
+    max-width: 100%;
+  }
+
+  .cell {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--heat-0);
+  }
+
+  .l1 {
+    background: var(--heat-1);
+  }
+
+  .l2 {
+    background: var(--heat-2);
+  }
+
+  .l3 {
+    background: var(--heat-3);
+  }
+
+  .l4 {
+    background: var(--heat-4);
+  }
+
+  .future {
+    background: transparent;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .legend span:first-child {
+    margin-right: var(--space-2xs);
+  }
+
+  .legend span:last-child {
+    margin-left: var(--space-2xs);
+  }
+
+  @media (max-width: 60rem) {
+    .grid {
+      grid-template-rows: repeat(7, auto);
+      grid-auto-columns: minmax(0, 1fr);
+      max-width: 420px;
+    }
+
+    .grid .cell {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+    }
+  }
+</style>

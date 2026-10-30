@@ -1,0 +1,377 @@
+---
+/**
+ * Full-text search over the Pagefind index written by `pnpm build`.
+ * Opens from the header button or Ctrl/Cmd+K. In `astro dev` there is no index yet.
+ */
+import { withBase } from '../utils/url';
+import Icon from './Icon.astro';
+
+const bundle = withBase('/pagefind/pagefind.js');
+const index = withBase('/search-index.json');
+---
+
+<dialog
+  class="search"
+  aria-labelledby="search-title"
+  data-search
+  data-bundle={bundle}
+  data-index={index}
+>
+  <header class="head">
+    <div>
+      <h2 id="search-title">Search</h2>
+      <p class="keys">Ctrl K / Cmd K</p>
+    </div>
+    <button class="close" type="button" aria-label="Close search" data-search-close>
+      <Icon name="close" />
+    </button>
+  </header>
+
+  <div class="body">
+    <form class="field" role="search" onsubmit="return false">
+      <Icon name="search" size={16} />
+      <label class="visually-hidden" for="search-input">
+        Search the archive
+      </label>
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Search notes..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </form>
+    <p class="status" role="status" aria-live="polite">
+      Start typing to search.
+    </p>
+    <ol class="results"></ol>
+  </div>
+</dialog>
+
+<script>
+  import { excerpt, highlight, searchDocs, type SearchDoc } from '../utils/search';
+
+  interface PagefindResult {
+    url: string;
+    excerpt: string;
+    meta: { title?: string };
+  }
+  interface Pagefind {
+    search: (q: string) => Promise<{ results: { data: () => Promise<PagefindResult> }[] }>;
+  }
+
+  const HINT = 'Start typing to search.';
+  const dialog = document.querySelector<HTMLDialogElement>('[data-search]');
+  const input = dialog?.querySelector<HTMLInputElement>('input');
+  const status = dialog?.querySelector<HTMLParagraphElement>('.status');
+  const list = dialog?.querySelector<HTMLOListElement>('.results');
+  let pagefind: Pagefind | null | undefined;
+  let local: SearchDoc[] | null | undefined;
+
+  // Production builds ship a Pagefind index; in dev there is none, so a small JSON index is used.
+  async function loadPagefind(): Promise<Pagefind | null> {
+    if (pagefind !== undefined) return pagefind;
+    try {
+      pagefind = (await import(/* @vite-ignore */ dialog!.dataset.bundle!)) as Pagefind;
+    } catch {
+      pagefind = null;
+    }
+    return pagefind;
+  }
+
+  async function loadLocal(): Promise<SearchDoc[] | null> {
+    if (local !== undefined) return local;
+    try {
+      const res = await fetch(dialog!.dataset.index!);
+      local = res.ok ? ((await res.json()) as SearchDoc[]) : null;
+    } catch {
+      local = null;
+    }
+    return local;
+  }
+
+  function open() {
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
+    input?.focus();
+  }
+
+  function close() {
+    if (!dialog?.open) return;
+    dialog.setAttribute('closing', '');
+    const done = () => {
+      dialog.removeAttribute('closing');
+      dialog.close();
+    };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) done();
+    else setTimeout(done, 140);
+  }
+
+  function row(url: string, title: string, excerptNode: Node): HTMLLIElement {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = url;
+    const strong = document.createElement('strong');
+    strong.textContent = title;
+    const span = document.createElement('span');
+    span.append(excerptNode);
+    a.append(strong, span);
+    li.append(a);
+    return li;
+  }
+
+  function marked(text: string, query: string): DocumentFragment {
+    const frag = document.createDocumentFragment();
+    for (const part of highlight(text, query)) {
+      if (part.hit) {
+        const m = document.createElement('mark');
+        m.textContent = part.text;
+        frag.append(m);
+      } else frag.append(part.text);
+    }
+    return frag;
+  }
+
+  function show(rows: HTMLLIElement[], total: number, query: string) {
+    if (!list || !status) return;
+    status.textContent = rows.length
+      ? `${total} ${total === 1 ? 'entry' : 'entries'} found`
+      : `Nothing in the archive matches “${query}”.`;
+    list.replaceChildren(...rows);
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  input?.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => void run(input.value.trim()), 140);
+  });
+
+  async function run(query: string) {
+    if (!list || !status) return;
+    if (!query) {
+      list.replaceChildren();
+      status.textContent = HINT;
+      return;
+    }
+
+    const pf = await loadPagefind();
+    if (pf) {
+      const { results } = await pf.search(query);
+      const items = await Promise.all(results.slice(0, 8).map((r) => r.data()));
+      show(
+        items.map((item) => {
+          const frag = document.createDocumentFragment();
+          const holder = document.createElement('span');
+          holder.innerHTML = item.excerpt; // Pagefind escapes content; only <mark> is added.
+          frag.append(...holder.childNodes);
+          return row(item.url, item.meta.title ?? item.url, frag);
+        }),
+        results.length,
+        query,
+      );
+      return;
+    }
+
+    const docs = await loadLocal();
+    if (!docs) {
+      status.textContent = 'Search is unavailable right now.';
+      return;
+    }
+    const found = searchDocs(docs, query, 8);
+    show(
+      found.map((d) => row(d.url, d.title, marked(excerpt(d, query), query))),
+      found.length,
+      query,
+    );
+  }
+
+  document.querySelectorAll('[data-search-open]').forEach((b) => b.addEventListener('click', open));
+  dialog?.querySelector('[data-search-close]')?.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (dialog?.open) close();
+      else open();
+    }
+  });
+  dialog?.addEventListener('click', (e) => {
+    if (e.target === dialog) close();
+  });
+  dialog?.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    close();
+  });
+</script>
+
+<style>
+  .search {
+    width: min(560px, calc(100vw - 2 * var(--gutter)));
+    max-height: min(72dvh, 640px);
+    margin: 12dvh auto auto;
+    padding: 0;
+    overflow: hidden;
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    box-shadow: 0 8px 32px color-mix(in oklab, var(--color-paper) 40%, black);
+  }
+
+  .search[open] {
+    animation: pop var(--dur-short) var(--ease-out);
+  }
+
+  .search[closing] {
+    animation: pop-out 140ms var(--ease-in) forwards;
+  }
+
+  .search::backdrop {
+    background: color-mix(in oklab, var(--color-paper) 55%, transparent);
+    backdrop-filter: blur(5px);
+    animation: fade var(--dur-short) var(--ease-out);
+  }
+
+  .head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-md) var(--space-sm);
+    border-bottom: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .head h2 {
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    font-weight: 700;
+  }
+
+  .keys {
+    margin-top: var(--space-3xs);
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .close {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin: calc(var(--space-xs) * -1) calc(var(--space-xs) * -1) 0 0;
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-ink-2);
+    cursor: pointer;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      background-color var(--dur-short) var(--ease-out);
+  }
+
+  .close:hover {
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
+  .body {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    overflow-y: auto;
+  }
+
+  .field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-inline: var(--space-sm);
+    border: var(--rule-hair) solid var(--color-rule-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-paper-2);
+    color: var(--color-muted);
+    transition: border-color var(--dur-short) var(--ease-out);
+  }
+
+  .field:focus-within {
+    border-color: var(--color-accent);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font-size: var(--text-md);
+    outline: none;
+  }
+
+  input::placeholder {
+    color: var(--color-muted);
+  }
+
+  .status {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+  }
+
+  .results {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .results:empty {
+    display: none;
+  }
+
+  .results :global(a) {
+    display: grid;
+    gap: var(--space-2xs);
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+  }
+
+  .results :global(a:hover),
+  .results :global(a:focus-visible) {
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
+  .results :global(strong) {
+    font-weight: 600;
+  }
+
+  .results :global(span) {
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+  }
+
+  .results :global(mark) {
+    background: transparent;
+    color: var(--color-accent);
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.98);
+    }
+  }
+
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+</style>

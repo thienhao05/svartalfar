@@ -1,0 +1,68 @@
+---
+/**
+ * The only component that renders the rune inscription. The string comes from site.rune and is
+ * never retyped. `intro` lets each rune settle in once; it is visible without JS or motion.
+ */
+import { site } from '../config/site';
+
+interface Props {
+  size?: 'mark' | 'hero';
+  intro?: boolean;
+  class?: string;
+}
+
+const { size = 'mark', intro = false, class: className } = Astro.props;
+const runes = Array.from(site.rune);
+---
+
+<span
+  class:list={['rune', `rune-${size}`, { 'rune-intro': intro }, className]}
+  role="img"
+  aria-label="Rune inscription"
+  lang="und-Runr"
+>
+  {runes.map((r, i) => (
+    <span aria-hidden="true" style={`--i: ${i}`}>
+      {r}
+    </span>
+  ))}
+</span>
+
+<style>
+  .rune {
+    display: inline-flex;
+    font-family: var(--font-rune);
+    color: var(--color-rune);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .rune-mark {
+    font-size: 1.15rem;
+    letter-spacing: 0.04em;
+  }
+
+  .rune-hero {
+    font-size: var(--text-rune);
+    letter-spacing: 0.06em;
+  }
+
+  .rune-intro > span {
+    animation: settle 520ms var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 40ms);
+  }
+
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .rune-hero {
+      font-size: clamp(2rem, 11vw, 3rem);
+      letter-spacing: 0.02em;
+    }
+  }
+</style>

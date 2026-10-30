@@ -1,0 +1,28 @@
+---
+/** Full-width shell for the Series, Tags and Years views. */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import KnowledgeHead from './KnowledgeHead.astro';
+
+interface Props {
+  view: 'series' | 'tags' | 'years';
+  title: string;
+  note: string;
+}
+
+const { view, title, note } = Astro.props;
+---
+
+<BaseLayout title={title} description={note}>
+  <div class="shell page">
+    <KnowledgeHead title="Knowledge" note={note} view={view} />
+    <section aria-label={title}>
+      <slot />
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    padding-block: var(--space-xl) var(--space-xl);
+  }
+</style>

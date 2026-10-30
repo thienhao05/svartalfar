@@ -1,0 +1,50 @@
+---
+/** Draws `pre.mermaid` blocks; mermaid is only downloaded on pages that contain one. */
+---
+
+<script>
+  import { oklchToRgb } from '../../utils/color';
+
+  const blocks = document.querySelectorAll<HTMLElement>('pre.mermaid');
+  if (blocks.length) {
+    const sources = [...blocks].map((b) => b.textContent ?? '');
+    const { default: mermaid } = await import('mermaid');
+    const draw = async () => {
+      const css = getComputedStyle(document.documentElement);
+      const v = (name: string) => css.getPropertyValue(name).trim();
+      // Mermaid cannot parse oklch(); hand it rgb.
+      const color = (name: string) => oklchToRgb(v(name));
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        fontFamily: v('--font-body'),
+        themeVariables: {
+          background: color('--color-paper-2'),
+          primaryColor: color('--color-paper-3'),
+          primaryTextColor: color('--color-ink'),
+          primaryBorderColor: color('--color-rule-strong'),
+          lineColor: color('--color-muted'),
+          textColor: color('--color-ink-2'),
+          tertiaryColor: color('--color-paper-2'),
+        },
+      });
+      for (const [i, block] of [...blocks].entries()) {
+        try {
+          const { svg } = await mermaid.render(`mermaid-${Date.now()}-${i}`, sources[i] ?? '');
+          block.innerHTML = svg;
+          block.dataset.processed = 'true';
+        } catch (err) {
+          // Keep the readable source if the diagram cannot be drawn.
+          block.textContent = sources[i] ?? '';
+          console.error('Mermaid could not draw diagram', i, err);
+        }
+      }
+    };
+    await draw();
+    // Redraw in the other palette when the mode toggles.
+    new MutationObserver(() => void draw()).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-mode'],
+    });
+  }
+</script>

@@ -1,0 +1,15 @@
+---
+interface Props {
+  date: Date;
+}
+
+const { date } = Astro.props;
+const label = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+}).format(date);
+---
+
+<time datetime={date.toISOString()}>{label}</time>
