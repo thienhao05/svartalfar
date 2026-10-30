@@ -5,3 +5,11 @@ pnpm-lock.yaml
 .claude/
 .agent/
 CLAUDE.md
+
+# Generated agent rule files (caveman-init)
+.cursor/
+.windsurf/
+.clinerules/
+.opencode/
+.github/copilot-instructions.md
+AGENTS.md
