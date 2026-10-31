@@ -4,6 +4,8 @@ description: 'Sample entry. Build in one stage, ship only the result in another.
 date: 2026-10-08
 lang: en
 area: learning
+series: 'Docker'
+seriesOrder: 1
 categories: ['DevOps']
 heroImage: '../../../assets/samples/sample-rose.jpg'
 tags: ['docker', 'ci', 'sample']
