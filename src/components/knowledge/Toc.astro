@@ -15,13 +15,15 @@ const { items } = Astro.props;
       <li>
         <a href={`#${item.slug}`}>{item.text}</a>
         {item.children.length > 0 && (
-          <ol>
-            {item.children.map((child) => (
-              <li>
-                <a href={`#${child.slug}`}>{child.text}</a>
-              </li>
-            ))}
-          </ol>
+          <div class="sub">
+            <ol>
+              {item.children.map((child) => (
+                <li>
+                  <a href={`#${child.slug}`}>{child.text}</a>
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
       </li>
     ))}
@@ -29,19 +31,49 @@ const { items } = Astro.props;
 </nav>
 
 <script>
-  // Mark the heading currently being read; the list works as plain links without this.
-  const links = new Map(
-    [...document.querySelectorAll<HTMLAnchorElement>('[data-toc] a')].map((a) => [
-      decodeURIComponent(a.hash.slice(1)),
-      a,
-    ]),
-  );
+  // Mark the heading being read, open its group and keep it in view.
+  // The list works as plain links without this: groups stay open until JS runs.
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const links = new Map<string, HTMLAnchorElement[]>();
+  document.querySelectorAll<HTMLAnchorElement>('[data-toc] a').forEach((a) => {
+    const id = decodeURIComponent(a.hash.slice(1));
+    links.set(id, [...(links.get(id) ?? []), a]);
+  });
+
+  const openGroup = (toc: Element | null, group: Element | null) => {
+    toc?.querySelectorAll('[data-open]').forEach((li) => li.removeAttribute('data-open'));
+    group?.setAttribute('data-open', '');
+  };
+
+  // A scrollable rail keeps the current link inside its frame.
+  const keepVisible = (a: HTMLElement) => {
+    const rail = a.closest<HTMLElement>('.toc-rail');
+    if (!rail) return;
+    const box = a.getBoundingClientRect();
+    const view = rail.getBoundingClientRect();
+    if (box.top >= view.top && box.bottom <= view.bottom) return;
+    rail.scrollBy({
+      top: box.top - view.top - (view.height - box.height) / 2,
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
+  };
+
+  document.querySelectorAll('[data-toc]').forEach((toc) => {
+    openGroup(toc, toc.querySelector(':scope > ol > li'));
+  });
+
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        links.forEach((a) => a.removeAttribute('aria-current'));
-        links.get(entry.target.id)?.setAttribute('aria-current', 'location');
+        document
+          .querySelectorAll('[data-toc] a[aria-current]')
+          .forEach((a) => a.removeAttribute('aria-current'));
+        for (const a of links.get(entry.target.id) ?? []) {
+          openGroup(a.closest('[data-toc]'), a.closest('[data-toc] > ol > li'));
+          a.setAttribute('aria-current', 'location');
+          keepVisible(a);
+        }
       }
     },
     { rootMargin: '-15% 0px -70% 0px' },
@@ -74,8 +106,18 @@ const { items } = Astro.props;
   }
 
   ol ol {
-    margin-top: var(--space-2xs);
     padding-left: var(--space-md);
+  }
+
+  /* The wrapper lets a group open and close by animating its row from 0fr to 1fr. */
+  .sub {
+    display: grid;
+    grid-template-rows: 1fr;
+  }
+
+  .sub > ol {
+    min-height: 0;
+    overflow: hidden;
   }
 
   a {
@@ -86,14 +128,48 @@ const { items } = Astro.props;
     font-size: var(--text-sm);
     line-height: 1.5;
     text-decoration: none;
+    transition:
+      color var(--dur-short) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out);
   }
 
   a:hover {
     color: var(--color-ink);
   }
 
+  /* With JS only the group being read shows its sub-headings, so a long outline stays short. */
+  :global(.js) .sub {
+    transition:
+      grid-template-rows 360ms var(--ease-in-out),
+      opacity 280ms var(--ease-out),
+      visibility 0s;
+  }
+
+  /* Collapsed links also leave the tab order once the fade is done. */
+  :global(.js) .toc > ol > li:not([data-open]) > .sub {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      grid-template-rows 360ms var(--ease-in-out),
+      opacity 200ms var(--ease-out),
+      visibility 0s 360ms;
+  }
+
+  li[data-open] > a:not([aria-current]) {
+    color: var(--color-ink-2);
+  }
+
   a[aria-current] {
     border-left-color: var(--color-accent);
     color: var(--color-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.js) .sub,
+    :global(.js) .toc > ol > li:not([data-open]) > .sub,
+    a {
+      transition: none;
+    }
   }
 </style>

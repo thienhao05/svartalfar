@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import expressiveCode from 'astro-expressive-code';
 import { defineConfig } from 'astro/config';
 
+import { remarkAlerts } from './src/utils/remark-alerts.ts';
 import { remarkMermaid } from './src/utils/remark-mermaid.ts';
 
 /**
@@ -33,7 +34,7 @@ export default defineConfig({
   markdown: {
     // unified (remark/rehype) instead of the default Sätteri, so the mermaid remark plugin runs;
     // MDX inherits this processor.
-    processor: unified({ remarkPlugins: [remarkMermaid] }),
+    processor: unified({ remarkPlugins: [remarkMermaid, remarkAlerts] }),
   },
   integrations: [
     expressiveCode({

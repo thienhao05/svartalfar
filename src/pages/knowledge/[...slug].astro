@@ -169,6 +169,12 @@ const minutes = readingMinutes(entry.body ?? '');
     top: calc(var(--nav-height) + var(--space-xl));
     max-height: calc(100dvh - var(--nav-height) - var(--space-2xl));
     overflow-y: auto;
+    /* A long outline still scrolls, but without a visible bar. */
+    scrollbar-width: none;
+  }
+
+  .toc-rail::-webkit-scrollbar {
+    display: none;
   }
 
   .toc-inline {

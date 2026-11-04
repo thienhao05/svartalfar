@@ -9,7 +9,7 @@ tags: ['docker', 'database', 'EF']
 related: ['devops/docker-multi-stage-build', 'networking/networking']
 ---
 
-# How do you run migrations on Linux?
+## How do you run EF migrations on Linux?
 
 > [!NOTE]
 > I had this problem when I started coding on Linux.
@@ -17,7 +17,7 @@ related: ['devops/docker-multi-stage-build', 'networking/networking']
 > Rider (IntelliJ) works well on Windows, but I can't use it as my main code editor on Linux.
 > So, I created this blog to remember useful Linux commands.
 
-## Summary
+### Migration commands
 
 - **Migrations:** Think of migrations as a history of changes in your database, like a diary.
   For example, what changed between the first version and the second version of a database?
@@ -43,11 +43,11 @@ dotnet ef migrations remove --project NameOfProject.Repository --startup-project
 dotnet ef database drop --project NameOfProject.Repository --startup-project NameOfProject.API
 ```
 
-# How about Docker?
+## Running databases with Docker
 
 Docker is a tool that helps us run databases and applications inside containers.
 
-## 1. Run PostgreSQL with Docker
+### 1. Run PostgreSQL with Docker
 
 ```bash
 # Create a PostgreSQL container
@@ -65,7 +65,7 @@ After that, you can connect your application to this database by adding a connec
 }
 ```
 
-## 2. Run another PostgreSQL database
+### 2. Run another PostgreSQL database
 
 What if I want to run another database at the same time?
 
@@ -92,7 +92,7 @@ Then, change the connection string in `appsettings.json`:
 > - First database: `localhost:5432`
 > - Second database: `localhost:5433`
 
-# Useful Docker commands on Linux
+## Useful Docker commands on Linux
 
 These are some useful commands you should know when working with Docker on Linux, especially because Linux does not have Docker Desktop by default.
 
@@ -110,15 +110,15 @@ docker start my-postgres
 docker stop my-postgres
 ```
 
-# Docker file, Docker Image, Docker Container, and Docker Compose
+## Dockerfile, Docker Image and Docker Container
 
-## Dockerfile ??
+### What is a Dockerfile?
 
 - A Dockerfile is a file that contains instructions for building and running your application.
 - A Dockerfile is used to build a **Docker Image**.
 - You can use this **Image** to run your application on different machines.
 
-### Think about it like this:
+#### Think about it like a fish tank
 
 Imagine you have a fish.
 
@@ -128,7 +128,7 @@ Imagine you have a fish.
 
 So, you can take this **Image** to another machine and run it without setting up everything again.
 
-### For example:
+#### Example: from Repository to Container, with a .NET Dockerfile
 
 ```text
 Repository
@@ -179,7 +179,7 @@ ENTRYPOINT ["dotnet", "NameOfProject.Api.dll"]
 
 > Dockerfile builds an Image. An Image runs as a Container.
 
-## Docker Image and Container
+### Docker Image and Container
 
 - **Docker Image:** A package that contains your application and everything it needs to run.(**Template**)
 
@@ -193,11 +193,11 @@ ENTRYPOINT ["dotnet", "NameOfProject.Api.dll"]
 
 ![alt text](../../../assets/knowledge/docker/dockerfile-image-container.png)
 
-# Summary
+---
 
-# Docker Basic Concepts
+## Summary: Docker basic concepts
 
-## 1. Dockerfile
+### 1. Dockerfile
 
 - **Technical:**
   - A Dockerfile is a text file without a file extension.
@@ -212,7 +212,7 @@ ENTRYPOINT ["dotnet", "NameOfProject.Api.dll"]
 
   In short, a Dockerfile is like a recipe for building a Docker Image.
 
-## 2. Docker Image
+### 2. Docker Image
 
 - **Technical:**
   - An Image is a package that contains our application and everything it needs to run, such as libraries, dependencies, and runtime environments.
@@ -225,7 +225,7 @@ ENTRYPOINT ["dotnet", "NameOfProject.Api.dll"]
 
   In short, you can take this Image to another machine and run it without setting up everything again (as long as the machine supports Docker).
 
-## 3. Docker Container
+### 3. Docker Container
 
 - **Technical:**
   - A Container is an isolated environment created from a Docker Image.
@@ -242,7 +242,7 @@ ENTRYPOINT ["dotnet", "NameOfProject.Api.dll"]
   - You can create another Container for testing.
   - Both Containers can use the same Image.
 
-## 4. Docker Volume
+### 4. Docker Volume
 
 - **Technical:**
   - A Volume is a way to store data outside a Container's writable layer.
@@ -260,7 +260,7 @@ ENTRYPOINT ["dotnet", "NameOfProject.Api.dll"]
 
   You can remove an old Container and create a new one while keeping the data stored in the Volume.
 
-## 5. Summary
+### 5. Summary: how they fit together
 
 ```text
 Dockerfile
@@ -289,9 +289,9 @@ Docker Volume
 
 | Dockerfile builds an Image. An Image runs as a Container. A Volume keeps your data safe.
 
-# Docker Compose ??
+## Docker Compose: manage multiple containers
 
-## 1. What is Docker Compose?
+### 1. What is Docker Compose?
 
 - **Technical:**
   - Docker Compose is a tool that helps you manage multiple Docker Containers at the same time.
@@ -310,7 +310,7 @@ Docker Volume
 
   In short, Docker Compose helps you manage your entire application in one place.
 
-## 2. How does it work?
+### 2. How does it work?
 
 Think about it like this:
 
@@ -329,7 +329,7 @@ Think about it like this:
        Container Container Container
 ```
 
-## 3. Example: .NET + PostgreSQL + RabbitMQ
+### 3. Example: .NET + PostgreSQL + RabbitMQ
 
 Create a file named `compose.yaml` in your project root.
 
@@ -345,7 +345,7 @@ MyProject/
     └── Repository/
 ```
 
-### Step 1: Create environment variables
+#### Step 1: Create environment variables
 
 Create a file named `.env`:
 
@@ -360,7 +360,7 @@ POSTGRES_PORT=5432
 ASPNETCORE_ENVIRONMENT=Development
 ```
 
-### Step 2: Configure Docker Compose
+#### Step 2: Configure Docker Compose
 
 Open `compose.yaml`:
 
@@ -399,7 +399,7 @@ volumes:
   postgres_data:
 ```
 
-### Step 3: Understand environment variables
+#### Step 3: Understand environment variables
 
 There are two important things you should understand:
 
@@ -440,7 +440,7 @@ ConnectionStrings__DefaultConnection
 
 This allows your API to read the connection string from environment variables instead of hardcoding it in `appsettings.json`.
 
-## 4. How can API connect to PostgreSQL?
+### 4. How can API connect to PostgreSQL?
 
 When API and PostgreSQL run inside Docker Compose, they can communicate with each other using service names.
 
@@ -473,7 +473,7 @@ API Container
 PostgreSQL Container
 ```
 
-## 5. Useful Docker Compose commands
+### 5. Useful Docker Compose commands
 
 ```bash
 # Start all Containers
@@ -513,7 +513,7 @@ docker compose down
 docker compose down -v
 ```
 
-## 6. Docker vs Docker Compose
+### 6. Docker vs Docker Compose
 
 | Docker                     | Docker Compose                  |
 | -------------------------- | ------------------------------- |
@@ -522,7 +522,7 @@ docker compose down -v
 | Configure through commands | Configure through YAML          |
 | Good for simple tests      | Good for multi-service projects |
 
-## 7. Important: Protect your environment variables
+### 7. Important: Protect your environment variables
 
 If your `.env` file contains passwords or other sensitive information, you should not upload it to GitHub.
 
@@ -543,7 +543,7 @@ POSTGRES_PORT=5432
 ASPNETCORE_ENVIRONMENT=Development
 ```
 
-## 8. Summary
+### 8. Summary: Docker Compose
 
 - **Docker:** Helps you create and run Containers.
 - **Docker Compose:** Helps you manage multiple Containers together.

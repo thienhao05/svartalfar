@@ -81,6 +81,45 @@
   color: var(--color-ink-2);
 }
 
+/* GitHub-style alerts (> [!NOTE]); the hue comes from the tag tokens so both modes stay readable. */
+.prose .alert {
+  --alert: var(--tag-2);
+  padding: var(--space-sm) var(--space-lg);
+  border-left: 2px solid var(--alert);
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+}
+
+.prose .alert-tip {
+  --alert: var(--tag-1);
+}
+
+.prose .alert-important {
+  --alert: var(--tag-4);
+}
+
+.prose .alert-warning {
+  --alert: var(--tag-0);
+}
+
+.prose .alert-caution {
+  --alert: var(--tag-5);
+}
+
+.prose .alert > :first-child {
+  margin-top: 0;
+}
+
+.prose .alert > :last-child {
+  margin-bottom: 0;
+}
+
+.prose .alert-title {
+  margin-bottom: var(--space-2xs);
+  color: var(--alert);
+  font-weight: 600;
+}
+
 .prose :not(pre) > code {
   padding: 0.1em 0.35em;
   border-radius: var(--radius-sm);
